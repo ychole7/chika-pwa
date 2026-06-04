@@ -1377,8 +1377,15 @@ function startTimer(){
   requestWakeLock(); // 화면 꺼짐 방지
   document.getElementById('btnStart').style.display='none';
   document.getElementById('btnPause').style.display='block';
-  if(remaining===TOTAL){const s=rand(SCRIPTS.start);showBubble(s);speak(s);}
-  else if(currentStep>=0)startRenderLoop('brushing',STEP_META[currentStep].animStep);
+  // 시작 시: updateStep이 첫 단계 멘트를 바로 내보냄 (시작 멘트 중복 제거)
+  if(currentStep>=0 && remaining!==TOTAL){
+    // 일시정지 후 재개
+    startRenderLoop('brushing',STEP_META[currentStep].animStep);
+  } else {
+    // 처음 시작 - 바로 첫 단계 진입시켜서 멘트 한 번만
+    currentStep=-1;
+    updateStep();
+  }
   timerIv=setInterval(()=>{remaining--;updateTimer();updateRing();updateStep();if(remaining<=0){clearInterval(timerIv);running=false;finishTimer();}},1000);
 }
 function pauseTimer(){
