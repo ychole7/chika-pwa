@@ -1082,6 +1082,126 @@ function drawChikamon(c,t,mode,step,mini){
   c.restore();
 }
 
+// 🌟 히든2 - 빛나리 (별 요정, 100회 해금)
+function drawByulnari(c,t,mode,step,mini){
+  const W=mini?145:240,H=mini?130:185;if(!mini)c.clearRect(0,0,W,H);
+  const fl=Math.sin(t*2.2)*4;
+  c.save();
+  const scale=mini?1:0.92;
+  c.translate(W/2,H*0.5+(mini?0:8)+fl);
+  c.scale(scale,scale);
+
+  // 반짝이는 후광
+  c.save();
+  for(let i=0;i<8;i++){
+    const a=i*Math.PI/4+t*0.8;
+    const r=mini?42:50;
+    c.globalAlpha=0.4+Math.sin(t*3+i)*0.3;
+    c.fillStyle='#FFE082';
+    const x=Math.cos(a)*r,y=Math.sin(a)*r;
+    c.beginPath();
+    for(let j=0;j<8;j++){const sa=j*Math.PI/4,sr=j%2===0?5:2;c.lineTo(x+Math.cos(sa)*sr,y+Math.sin(sa)*sr);}
+    c.closePath();c.fill();
+  }
+  c.restore();
+
+  // 별 몸통 (큰 별)
+  const bodyR=mini?36:44;
+  c.fillStyle='#FFD54F';
+  c.beginPath();
+  for(let i=0;i<10;i++){
+    const a=(i*Math.PI/5)-Math.PI/2;
+    const r=i%2===0?bodyR:bodyR*0.5;
+    const x=Math.cos(a)*r,y=Math.sin(a)*r;
+    i===0?c.moveTo(x,y):c.lineTo(x,y);
+  }
+  c.closePath();c.fill();
+  // 안쪽 밝게
+  c.fillStyle='#FFE082';
+  c.beginPath();
+  for(let i=0;i<10;i++){
+    const a=(i*Math.PI/5)-Math.PI/2;
+    const r=i%2===0?bodyR*0.7:bodyR*0.35;
+    const x=Math.cos(a)*r,y=Math.sin(a)*r;
+    i===0?c.moveTo(x,y):c.lineTo(x,y);
+  }
+  c.closePath();c.fill();
+
+  // 볼터치
+  circ(c,-13,2,mini?5:6,'rgba(255,140,100,0.5)');
+  circ(c,13,2,mini?5:6,'rgba(255,140,100,0.5)');
+
+  const or=getOpenR(t,mode);
+  drawMouth(c,0,mini?4:5,mini?22:26,mini?12:14,or,t,mode,step);
+  drawEyes(c,0,mini?-12:-14,mode,step,t,mini?10:12,mini?5:6,mini?6:7,'#E65100');
+  c.restore();
+}
+
+// 🌟 히든3 - 무지개냥 (고양이, 150회 해금)
+function drawRainbowcat(c,t,mode,step,mini){
+  const W=mini?145:240,H=mini?130:185;if(!mini)c.clearRect(0,0,W,H);
+  const bounce=mode==='idle'?Math.sin(t*2.3)*3:mode==='done'?Math.sin(t*6)*6:Math.sin(t*7)*2;
+  c.save();
+  const scale=mini?1:0.9;
+  c.translate(W/2,H*0.52+bounce);
+  c.scale(scale,scale);
+
+  // 무지개 꼬리
+  const rainbow=['#FF5252','#FF9800','#FFD600','#4CAF50','#2196F3','#9C27B0'];
+  c.save();
+  for(let i=0;i<rainbow.length;i++){
+    c.strokeStyle=rainbow[i];
+    c.lineWidth=3;
+    c.globalAlpha=0.85;
+    c.beginPath();
+    const baseX=mini?32:40, off=i*4;
+    for(let a=0;a<=20;a++){
+      const tt=a/20;
+      const x=baseX+Math.sin(tt*3+t*2)*8+tt*(mini?14:18);
+      const y=tt*(mini?24:30)-off+(mini?4:6);
+      a===0?c.moveTo(x,y):c.lineTo(x,y);
+    }
+    c.stroke();
+  }
+  c.restore();
+
+  // 몸통 (흰 고양이)
+  const bodyR=mini?34:42;
+  circ(c,0,mini?8:10,bodyR*0.85,'#F5F5F5');
+  circ(c,0,mini?-8:-10,bodyR,'#FFFFFF');
+
+  // 귀
+  c.fillStyle='#FFFFFF';
+  c.beginPath();c.moveTo(-bodyR*0.7,-bodyR*0.6);c.lineTo(-bodyR*0.5,-bodyR*1.15);c.lineTo(-bodyR*0.15,-bodyR*0.75);c.closePath();c.fill();
+  c.beginPath();c.moveTo(bodyR*0.7,-bodyR*0.6);c.lineTo(bodyR*0.5,-bodyR*1.15);c.lineTo(bodyR*0.15,-bodyR*0.75);c.closePath();c.fill();
+  // 귀 안쪽 핑크
+  c.fillStyle='#FFB7C5';
+  c.beginPath();c.moveTo(-bodyR*0.55,-bodyR*0.65);c.lineTo(-bodyR*0.45,-bodyR*1.0);c.lineTo(-bodyR*0.28,-bodyR*0.75);c.closePath();c.fill();
+  c.beginPath();c.moveTo(bodyR*0.55,-bodyR*0.65);c.lineTo(bodyR*0.45,-bodyR*1.0);c.lineTo(bodyR*0.28,-bodyR*0.75);c.closePath();c.fill();
+
+  // 볼터치
+  circ(c,-bodyR*0.6,-bodyR*0.05,mini?5:6,'rgba(255,150,180,0.55)');
+  circ(c,bodyR*0.6,-bodyR*0.05,mini?5:6,'rgba(255,150,180,0.55)');
+
+  const or=getOpenR(t,mode);
+  drawMouth(c,0,mini?-4:-5,mini?22:26,mini?12:14,or,t,mode,step);
+  drawEyes(c,0,mini?-16:-19,mode,step,t,mini?10:12,mini?5:6,mini?6:7,'#5D4037');
+  // 수염
+  c.strokeStyle='#bbb';c.lineWidth=1.2;
+  for(let s=-1;s<=1;s+=2){
+    for(let i=0;i<3;i++){
+      c.beginPath();
+      c.moveTo(s*8,(mini?-3:-4)+i*3);
+      c.lineTo(s*(mini?26:30),(mini?-6:-8)+i*5);
+      c.stroke();
+    }
+  }
+  // 코
+  c.fillStyle='#FF8FAB';c.beginPath();c.moveTo(-2,mini?-7:-9);c.lineTo(2,mini?-7:-9);c.lineTo(0,mini?-4:-6);c.closePath();c.fill();
+  c.restore();
+}
+
+
 // ════════════════════════════════════════
 // 캐릭터 데이터 (draw 함수 선언 후에 정의)
 // ════════════════════════════════════════
@@ -1093,6 +1213,8 @@ const CHARS=[
   {id:'pororo',name:'뽀로로',emoji:'🐧',color1:'#4FC3F7',color2:'#0288D1',bgGrad:['#e0f7ff','#c5eeff'],roadColor:'#37474F',btnGrad:'linear-gradient(135deg,#4FC3F7,#0288D1)',draw:drawPororo},
   {id:'larva',name:'라바',emoji:'🐛',color1:'#FFD600',color2:'#F57F17',bgGrad:['#fffde0','#fff8c0'],roadColor:'#5D4037',btnGrad:'linear-gradient(135deg,#FFD600,#F57F17)',draw:drawLarva},
   {id:'chikamon',name:'치카몬',emoji:'💜',color1:'#9C7AE0',color2:'#6A4BA8',bgGrad:['#f3e5ff','#e1d0ff'],roadColor:'#6A4BA8',btnGrad:'linear-gradient(135deg,#9C7AE0,#6A4BA8)',draw:drawChikamon,hidden:true,unlockAt:50},
+  {id:'byulnari',name:'빛나리',emoji:'⭐',color1:'#FFD54F',color2:'#FFA000',bgGrad:['#fffde7','#fff3c4'],roadColor:'#9E7E2E',btnGrad:'linear-gradient(135deg,#FFD54F,#FFA000)',draw:drawByulnari,hidden:true,unlockAt:100},
+  {id:'rainbowcat',name:'무지개냥',emoji:'🌈',color1:'#FF80AB',color2:'#9C27B0',bgGrad:['#fce4ff','#f3e0ff'],roadColor:'#8E5572',btnGrad:'linear-gradient(135deg,#FF80AB,#9C27B0)',draw:drawRainbowcat,hidden:true,unlockAt:150},
 ];
 
 // ════════════════════════════════════════
@@ -1358,11 +1480,12 @@ function updateStep(){
     currentStep=idx;
     for(let i=0;i<STEP_COUNT;i++){const p=document.getElementById('sp'+i);if(p){p.classList.remove('active','done');if(i<idx)p.classList.add('done');if(i===idx)p.classList.add('active');}}
     document.getElementById('ringSub').textContent=STEP_META[idx].label;
-    const script=getScript(idx, selectedChar.name);
+    const animS=STEP_META[idx].animStep; // 단계 고유 번호 (순서 바뀌어도 멘트 일치)
+    const script=getScript(animS, selectedChar.name);
     showBubble(script);speak(script);
-    startRenderLoop('brushing',STEP_META[idx].animStep);
+    startRenderLoop('brushing',animS);
     const st=document.getElementById('st'+idx);if(st)st.classList.add('lit');
-    if(idx+1<STEP_COUNT)prefetchScript(idx+1,selectedChar.name);
+    if(idx+1<STEP_COUNT){const nextAnim=STEP_META[idx+1].animStep;prefetchScript(nextAnim,selectedChar.name);}
   }
 }
 function animRoad(on){document.querySelectorAll('.road-line').forEach(l=>l.style.animationPlayState=on?'running':'paused');}
@@ -1387,14 +1510,15 @@ function startTimer(){
   requestWakeLock(); // 화면 꺼짐 방지
   document.getElementById('btnStart').style.display='none';
   document.getElementById('btnPause').style.display='block';
-  // 시작 시: updateStep이 첫 단계 멘트를 바로 내보냄 (시작 멘트 중복 제거)
   if(currentStep>=0 && remaining!==TOTAL){
     // 일시정지 후 재개
     startRenderLoop('brushing',STEP_META[currentStep].animStep);
   } else {
-    // 처음 시작 - 바로 첫 단계 진입시켜서 멘트 한 번만
+    // 처음 시작 - 인삿말은 말풍선으로만 표시 (음성 X, 겹침 방지)
     currentStep=-1;
-    updateStep();
+    const greeting=rand(SCRIPTS.start);
+    showBubble(greeting); // 음성 없이 말풍선만
+    // 첫 단계 멘트(음성)는 1초 후 updateStep에서 자연스럽게 시작됨
   }
   timerIv=setInterval(()=>{remaining--;updateTimer();updateRing();updateStep();if(remaining<=0){clearInterval(timerIv);running=false;finishTimer();}},1000);
 }
