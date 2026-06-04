@@ -189,6 +189,21 @@ body{font-family:'Jua',sans-serif;background:linear-gradient(160deg,#c8edff 0%,#
 @keyframes pinShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)}}
 .pin-cancel{width:100%;padding:10px;border:1.5px solid #e0d8ff;border-radius:14px;
   background:white;font-family:'Jua',sans-serif;font-size:0.9rem;color:#aaa;cursor:pointer;}
+/* 확인 모달 */
+#confirmOverlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:450;
+  display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.3s;}
+#confirmOverlay.open{opacity:1;pointer-events:all;}
+#confirmModal{background:white;border-radius:24px;padding:24px 22px 20px;width:300px;text-align:center;
+  transform:scale(0.85);transition:transform 0.3s cubic-bezier(.34,1.56,.64,1);}
+#confirmOverlay.open #confirmModal{transform:scale(1);}
+.confirm-emoji{font-size:2.6rem;margin-bottom:8px;}
+.confirm-msg{font-size:1rem;color:#3d2b8e;margin-bottom:6px;line-height:1.4;}
+.confirm-sub{font-size:0.78rem;color:#aaa;margin-bottom:18px;}
+.confirm-btns{display:flex;gap:8px;}
+.confirm-yes{flex:1;padding:12px;border:none;border-radius:14px;background:linear-gradient(135deg,#FF8C42,#FF6B6B);
+  color:white;font-family:'Jua',sans-serif;font-size:0.95rem;cursor:pointer;}
+.confirm-no{flex:1;padding:12px;border:1.5px solid #e0d8ff;border-radius:14px;background:white;
+  color:#7c4dff;font-family:'Jua',sans-serif;font-size:0.95rem;cursor:pointer;}
 
 /* PWA 설치 배너 *//* PWA 설치 배너 */
 #installBanner{display:none;position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:white;border-radius:20px;padding:14px 18px;box-shadow:0 8px 30px rgba(124,77,255,0.25);border:2px solid #ede7ff;flex-direction:row;align-items:center;gap:12px;z-index:1000;width:380px;max-width:95vw;}
@@ -239,6 +254,19 @@ body{font-family:'Jua',sans-serif;background:linear-gradient(160deg,#c8edff 0%,#
       <button class="pin-key del" onclick="pinClear()">✕</button>
     </div>
     <button class="pin-cancel" onclick="closePinModal()">취소</button>
+  </div>
+</div>
+
+<!-- 확인 모달 -->
+<div id="confirmOverlay">
+  <div id="confirmModal">
+    <div class="confirm-emoji" id="confirmEmoji">🤔</div>
+    <div class="confirm-msg" id="confirmMsg">정말요?</div>
+    <div class="confirm-sub" id="confirmSub"></div>
+    <div class="confirm-btns">
+      <button class="confirm-no" onclick="confirmAnswer(false)">아니요</button>
+      <button class="confirm-yes" onclick="confirmAnswer(true)">네</button>
+    </div>
   </div>
 </div>
 
@@ -737,19 +765,24 @@ function getTTSKey(text){
   return TTS_KEY_MAP[clean] || null;
 }
 
+let _lastSpeakText='', _lastSpeakTime=0;
 function speak(raw){
-  stopTTS();
-  speechSynthesis.cancel();
   if(!window.speechSynthesis)return;
   const text = preprocess(wn(raw));
   if(!text)return;
+  // 같은 텍스트가 1.5초 내 중복 호출되면 무시 (이름 중복 방지)
+  const now=Date.now();
+  if(text===_lastSpeakText && now-_lastSpeakTime<1500) return;
+  _lastSpeakText=text; _lastSpeakTime=now;
+  stopTTS();
+  speechSynthesis.cancel();
   const u=new SpeechSynthesisUtterance(text);
   u.lang='ko-KR';u.volume=1.0;
   const sl=getTimeSlot();
   u.rate=sl==='morning'?1.02:sl==='evening'?0.9:1.05;
   u.pitch=sl==='morning'?1.2:sl==='evening'?1.05:1.15;
   if(_koVoice)u.voice=_koVoice;
-  setTimeout(()=>{try{speechSynthesis.speak(u);}catch(e){}},60);
+  setTimeout(()=>{try{speechSynthesis.speak(u);}catch(e){}},80);
 }
 function drainTTS(){
   if(!ttsQueue.length){ttsSpeaking=false;hideTTSInd();return;}
@@ -973,6 +1006,72 @@ function drawLarva(c,t,mode,step,mini){
   c.restore();
 }
 
+// 🌟 히든 캐릭터 - 치카몬 (오리지널, 50회 달성시 해금)
+function drawChikamon(c,t,mode,step,mini){
+  const W=mini?145:240,H=mini?130:185;if(!mini)c.clearRect(0,0,W,H);
+  const bounce=mode==='idle'?Math.sin(t*2.2)*3:mode==='done'?Math.sin(t*6)*7:Math.sin(t*7)*2.5;
+  c.save();
+  const scale=mini?1:0.92;
+  c.translate(W/2,H*0.52+bounce);
+  c.scale(scale,scale);
+
+  // 몸통 (보라색 털뭉치)
+  const bodyR=mini?38:46;
+  // 털 질감 (외곽 삐죽삐죽)
+  c.fillStyle='#9C7AE0';
+  c.beginPath();
+  const spikes=20;
+  for(let i=0;i<spikes*2;i++){
+    const a=(i*Math.PI/spikes)-Math.PI/2;
+    const r=i%2===0?bodyR:bodyR-(mini?4:5);
+    const x=Math.cos(a)*r, y=Math.sin(a)*r*1.05;
+    i===0?c.moveTo(x,y):c.lineTo(x,y);
+  }
+  c.closePath();c.fill();
+
+  // 몸통 안쪽 (밝은 보라)
+  circ(c,0,2,bodyR-(mini?6:7),'#B39DDB');
+  // 배 (연보라)
+  c.fillStyle='#D1C4E9';
+  c.beginPath();c.ellipse(0,mini?14:18,mini?20:25,mini?22:28,0,0,Math.PI*2);c.fill();
+
+  // 팔 (만세 동작)
+  c.strokeStyle='#9C7AE0';c.lineWidth=mini?8:10;c.lineCap='round';
+  const armUp=mode==='done'?Math.sin(t*6)*0.3:0;
+  c.beginPath();c.moveTo(-bodyR*0.7,0);c.lineTo(-bodyR*1.1,-bodyR*0.7-armUp*15);c.stroke();
+  c.beginPath();c.moveTo(bodyR*0.7,0);c.lineTo(bodyR*1.1,-bodyR*0.7-armUp*15);c.stroke();
+  // 손 (브이)
+  circ(c,-bodyR*1.1,-bodyR*0.7-armUp*15,mini?6:7,'#B39DDB');
+  circ(c,bodyR*1.1,-bodyR*0.7-armUp*15,mini?6:7,'#B39DDB');
+
+  // 볼터치
+  circ(c,-bodyR*0.55,-bodyR*0.05,mini?6:7,'rgba(255,150,180,0.5)');
+  circ(c,bodyR*0.55,-bodyR*0.05,mini?6:7,'rgba(255,150,180,0.5)');
+
+  // 입 (먼저 그려서 눈이 위에)
+  const or=getOpenR(t,mode);
+  drawMouth(c,0,mini?-2:-3,mini?26:30,mini?14:16,or,t,mode,step);
+
+  // 눈
+  drawEyes(c,0,mini?-20:-24,mode,step,t,mini?11:13,mini?6:7,mini?7:8,'#4A148C');
+
+  // 별 배지 (가슴)
+  if(!mini){
+    c.save();c.translate(bodyR*0.5,bodyR*0.4);
+    c.fillStyle='#FF8FAB';
+    const sr=8,sr2=4;
+    c.beginPath();
+    for(let i=0;i<10;i++){const r=i%2===0?sr:sr2,a=(i*Math.PI/5)-Math.PI/2;
+      const x=Math.cos(a)*r,y=Math.sin(a)*r;i===0?c.moveTo(x,y):c.lineTo(x,y);}
+    c.closePath();c.fill();
+    // 별 얼굴
+    circ(c,-2,-1,1.2,'#4A148C');circ(c,2,-1,1.2,'#4A148C');
+    c.strokeStyle='#4A148C';c.lineWidth=1;c.beginPath();c.arc(0,1,2,0.2,Math.PI-0.2);c.stroke();
+    c.restore();
+  }
+  c.restore();
+}
+
 // ════════════════════════════════════════
 // 캐릭터 데이터 (draw 함수 선언 후에 정의)
 // ════════════════════════════════════════
@@ -983,6 +1082,7 @@ const CHARS=[
   {id:'tinping',name:'티니핑',emoji:'🧚',color1:'#FF85C2',color2:'#d4006a',bgGrad:['#fff0fa','#ffd6f0'],roadColor:'#9C5B7A',btnGrad:'linear-gradient(135deg,#FF85C2,#d4006a)',draw:drawTinping},
   {id:'pororo',name:'뽀로로',emoji:'🐧',color1:'#4FC3F7',color2:'#0288D1',bgGrad:['#e0f7ff','#c5eeff'],roadColor:'#37474F',btnGrad:'linear-gradient(135deg,#4FC3F7,#0288D1)',draw:drawPororo},
   {id:'larva',name:'라바',emoji:'🐛',color1:'#FFD600',color2:'#F57F17',bgGrad:['#fffde0','#fff8c0'],roadColor:'#5D4037',btnGrad:'linear-gradient(135deg,#FFD600,#F57F17)',draw:drawLarva},
+  {id:'chikamon',name:'치카몬',emoji:'💜',color1:'#9C7AE0',color2:'#6A4BA8',bgGrad:['#f3e5ff','#e1d0ff'],roadColor:'#6A4BA8',btnGrad:'linear-gradient(135deg,#9C7AE0,#6A4BA8)',draw:drawChikamon,hidden:true,unlockAt:50},
 ];
 
 // ════════════════════════════════════════
@@ -1052,13 +1152,37 @@ function addProfile(){
 function buildSelectScreen(){
   const grid=document.getElementById('charGrid');
   grid.innerHTML='';
-  // 마지막 캐릭터 ID 가져오기
   const profile=getActiveProfile();
   const lastCharId=profile?.lastChar||null;
+  const totalCount=getTotalCount();
+
   CHARS.forEach(ch=>{
+    const locked = ch.hidden && totalCount < ch.unlockAt;
     const card=document.createElement('div');
     card.className='char-card';
+
+    if(locked){
+      // 잠긴 히든 캐릭터 - 물음표 + 잠금
+      card.innerHTML=`<canvas width="90" height="78"></canvas>
+        <div class="cname">???</div>
+        <div style="position:absolute;inset:0;background:rgba(80,60,120,0.82);border-radius:17px;
+          display:flex;flex-direction:column;align-items:center;justify-content:center;">
+          <div style="font-size:1.8rem;">🔒</div>
+          <div style="font-size:0.6rem;color:white;margin-top:2px;">${ch.unlockAt}회 달성</div>
+          <div style="font-size:0.55rem;color:#ffe066;margin-top:1px;">(${totalCount}/${ch.unlockAt})</div>
+        </div>`;
+      grid.appendChild(card);
+      return;
+    }
+
     card.innerHTML=`<canvas width="90" height="78"></canvas><div class="cname">${ch.name}</div><span class="check">✅</span>`;
+    if(ch.hidden){
+      // 해금된 히든 캐릭터 표시
+      const badge=document.createElement('div');
+      badge.style.cssText='position:absolute;top:4px;left:6px;font-size:0.7rem;';
+      badge.textContent='✨';
+      card.appendChild(badge);
+    }
     const cv=card.querySelector('canvas');
     const c2=cv.getContext('2d');
     c2.save();c2.scale(0.62,0.62);
@@ -1070,7 +1194,6 @@ function buildSelectScreen(){
       document.getElementById('selectBtn').disabled=false;
     };
     grid.appendChild(card);
-    // 마지막 캐릭터 자동 선택
     if(ch.id===lastCharId){
       selectedChar=ch; selectedCardEl=card; card.classList.add('selected');
       document.getElementById('selectBtn').disabled=false;
@@ -1287,8 +1410,21 @@ function finishTimer(){
   // 총 횟수 증가 + 레벨업 체크
   const prevTotal = getTotalCount();
   setTotalCount(prevTotal + 1);
+  const newTotal = prevTotal + 1;
   checkLevelUp(prevTotal);
   updateGrowthBadge();
+  // 히든 캐릭터 해금 체크
+  CHARS.forEach(ch=>{
+    if(ch.hidden && prevTotal < ch.unlockAt && newTotal >= ch.unlockAt){
+      setTimeout(()=>{
+        document.getElementById('luEmoji').textContent=ch.emoji;
+        document.getElementById('luTitle').textContent='🎉 히든 캐릭터 해금!';
+        document.getElementById('luSub').textContent=`'${ch.name}'을(를) 만났어요! 이제 같이 놀 수 있어요!`;
+        document.getElementById('levelUpOverlay').classList.add('show');
+        for(let i=0;i<40;i++)setTimeout(confetti,i*55);
+      }, 3500);
+    }
+  });
   awardSticker();
 }
 function resetTimer(){
@@ -1303,21 +1439,25 @@ function resetTimer(){
 function goBack(){
   // 양치 진행 중이면 확인
   if(running){
-    if(!confirm('지금 그만두고 캐릭터를 바꿀까요?\n(지금까지 한 건 저장되지 않아요)')) return;
+    customConfirm('지금 그만두고 캐릭터를 바꿀까요?', '지금까지 한 건 저장되지 않아요', '🤔', (yes)=>{
+      if(yes) doGoBack();
+    });
+    return;
   }
+  doGoBack();
+}
+function doGoBack(){
   clearInterval(timerIv);running=false;clearInterval(foamIv);animRoad(false);
   releaseWakeLock();
   stopTTS();
   if(animRaf){cancelAnimationFrame(animRaf);animRaf=null;}
-  stopMusic(); // 바꾸기는 종료이므로 음악도 정지
+  stopMusic();
   speechSynthesis.cancel();ttsQueue=[];ttsSpeaking=false;
-  // 타이머 완전 초기화
   remaining=TOTAL;currentStep=-1;
   document.getElementById('mainScreen').style.display='none';
   document.getElementById('selectScreen').style.display='block';
   selectedChar=null;if(selectedCardEl){selectedCardEl.classList.remove('selected');selectedCardEl=null;}
   document.getElementById('selectBtn').disabled=true;
-  // 마지막 캐릭터 자동선택 위해 다시 빌드
   buildSelectScreen();
   renderProfileBar();
 }
@@ -1373,6 +1513,19 @@ function awardSticker(){
 const PARENT_PIN='1234';
 let dashUnlocked=false;
 let _pinBuffer='', _pinCallback=null;
+let _confirmCallback=null;
+function customConfirm(msg, sub, emoji, cb){
+  document.getElementById('confirmMsg').textContent=msg;
+  document.getElementById('confirmSub').textContent=sub||'';
+  document.getElementById('confirmEmoji').textContent=emoji||'🤔';
+  _confirmCallback=cb;
+  document.getElementById('confirmOverlay').classList.add('open');
+}
+function confirmAnswer(yes){
+  document.getElementById('confirmOverlay').classList.remove('open');
+  const cb=_confirmCallback; _confirmCallback=null;
+  if(cb) cb(yes);
+}
 
 function pinInput(n){
   if(_pinBuffer.length>=4)return;
