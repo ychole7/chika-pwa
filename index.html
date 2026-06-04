@@ -830,7 +830,13 @@ async function prefetchScript(idx, charName){
 }
 function getScript(stepIdx,charName){
   const key=`${charName}_${stepIdx}`;
-  return scriptCache[key]||rand(SCRIPTS.steps[stepIdx]||SCRIPTS.steps[0]);
+  const cached = scriptCache[key];
+  if(cached){
+    // Claude API 멘트는 이름이 없으므로 앞에 {name}아, 붙임
+    return '{name}아, ' + cached;
+  }
+  // 기본 SCRIPTS (이미 {name} 포함)
+  return rand(SCRIPTS.steps[stepIdx]||SCRIPTS.steps[0]);
 }
 
 // ════════════════════════════════════════
