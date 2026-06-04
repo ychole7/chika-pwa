@@ -560,153 +560,157 @@ const MUSIC_TRACKS = [
   {id:'sigma',    name:'🎵 Kids Happy BG', artist:'SigmaMusicArt', data:'audio/music_sigma.mp3'},
 ];
 
-let musicPlaying=false, _bgAudio=null, _currentTrackId='mountain';
-// Web Audio API - iOS에서도 볼륨 조절 가능
-let _audioCtx=null, _gainNode=null, _sourceNode=null;
+let musicPlaying=false, _isMuted=false, _currentTrackId='mountain';
+// Audio 엘리먼트를 곡마다 미리 생성 (재사용 → createMediaElementSource 문제 회피)
+const _audioEls={};
+// Web Audio API GainNode (곡당 1회만 연결)
+let _audioCtx=null, _gainNode=null;
+const _connectedEls=new WeakSet();
 
 function getAudioCtx(){
-  if(!_audioCtx) _audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+  if(!_audioCtx){
+    try{ _audioCtx=new(window.AudioContext||window.webkitAudioContext)(); }catch(e){}
+  }
   return _audioCtx;
 }
 function getGainNode(){
-  if(!_gainNode){
-    const ctx=getAudioCtx();
-    _gainNode=ctx.createGain();
-    _gainNode.gain.value=0.3;
-    _gainNode.connect(ctx.destination);
+  if(!_gainNode && getAudioCtx()){
+    _gainNode=_audioCtx.createGain();
+    _gainNode.gain.value=getVolume();
+    _gainNode.connect(_audioCtx.destination);
   }
   return _gainNode;
 }
-
-function connectAudioToGain(audioEl){
+function getAudioEl(trackId){
+  if(!_audioEls[trackId]){
+    const track=MUSIC_TRACKS.find(t=>t.id===trackId)||MUSIC_TRACKS[0];
+    const a=new Audio(track.data);
+    a.loop=true;
+    a.volume=getVolume();
+    _audioEls[trackId]=a;
+  }
+  return _audioEls[trackId];
+}
+function connectGain(audioEl){
+  // 엘리먼트당 1회만 연결
+  const ctx=getAudioCtx();
+  if(!ctx || _connectedEls.has(audioEl)) return;
   try{
-    const ctx=getAudioCtx();
-    if(_sourceNode){try{_sourceNode.disconnect();}catch(e){}}
-    _sourceNode=ctx.createMediaElementSource(audioEl);
-    _sourceNode.connect(getGainNode());
-  }catch(e){
-    // 이미 연결된 경우 무시
-    console.log('Audio connect:',e.message);
-  }
+    const src=ctx.createMediaElementSource(audioEl);
+    src.connect(getGainNode());
+    _connectedEls.add(audioEl);
+  }catch(e){ /* 이미 연결됨 */ }
 }
 
-function loadTrack(id){
-  const track=MUSIC_TRACKS.find(t=>t.id===id)||MUSIC_TRACKS[0];
-  const wasPlaying=musicPlaying;
-  if(_bgAudio){_bgAudio.pause();_bgAudio=null;}
-  if(_sourceNode){try{_sourceNode.disconnect();}catch(e){}_sourceNode=null;}
-  _currentTrackId=track.id;
-  _bgAudio=new Audio(track.data);
-  _bgAudio.loop=true;
-  _bgAudio.crossOrigin='anonymous';
-  localStorage.setItem('chika_track',id);
-  if(wasPlaying){
-    connectAudioToGain(_bgAudio);
-    _bgAudio.play().catch(()=>{});
-  }
-}
-
-function getBgAudio(){
-  if(!_bgAudio){
-    const savedId=localStorage.getItem('chika_track')||'mountain';
-    const track=MUSIC_TRACKS.find(t=>t.id===savedId)||MUSIC_TRACKS[0];
-    _currentTrackId=track.id;
-    _bgAudio=new Audio(track.data);
-    _bgAudio.loop=true;
-    _bgAudio.crossOrigin='anonymous';
-  }
-  return _bgAudio;
-}
-
-function startMusic(){
-  const audio=getBgAudio();
-  try{
-    connectAudioToGain(audio);
-    const ctx=getAudioCtx();
-    if(ctx.state==='suspended') ctx.resume().then(()=>audio.play().catch(()=>{}));
-    else audio.play().catch(()=>{});
-  }catch(e){ audio.play().catch(()=>{}); }
-  musicPlaying=true;
-  _isMuted=false;
-  updateMusicIcon();
-}
-function stopMusic(){
-  if(_bgAudio){_bgAudio.pause();_bgAudio.currentTime=0;}
-  musicPlaying=false;
-  _isMuted=false;
-  if(_gainNode){
-    const sv=document.getElementById('volSlider');
-    _gainNode.gain.value=sv?parseInt(sv.value)/100:0.3;
-  }
-  updateMusicIcon();
-}
-let _isMuted=false;
-function toggleMusic(){
-  if(_isMuted){
-    // 언뮤트: GainNode 볼륨 복원
-    _isMuted=false;
-    const sv=document.getElementById('volSlider');
-    const vol=sv?parseInt(sv.value)/100:0.3;
-    if(_gainNode) _gainNode.gain.value=vol;
-    // 오디오가 멈춰있으면 재개
-    if(_bgAudio&&_bgAudio.paused){
-      connectAudioToGain(_bgAudio);
-      if(getAudioCtx().state==='suspended') getAudioCtx().resume();
-      _bgAudio.play().catch(()=>{});
-    }
-    musicPlaying=true;
-    updateMusicIcon();
-  } else if(musicPlaying){
-    // 뮤트: 볼륨만 0으로 (재생은 유지)
-    _isMuted=true;
-    if(_gainNode) _gainNode.gain.value=0;
-    musicPlaying=false;
-    updateMusicIcon();
-  } else {
-    // 음악 시작
-    startMusic();
-  }
-}
-function updateMusicIcon(){
-  const btn=document.getElementById('musicBtn');
-  const slider=document.getElementById('volSlider');
-  if(!btn)return;
-  const vol=slider?parseInt(slider.value):30;
-  if(_isMuted||!musicPlaying){btn.textContent='🔇';return;}
-  btn.textContent=vol===0?'🔇':vol<40?'🔉':'🎵';
-}
 function getVolume(){
   const s=document.getElementById('volSlider');
   return s?parseInt(s.value)/100:0.3;
 }
+
+function startMusic(){
+  const audio=getAudioEl(_currentTrackId);
+  const ctx=getAudioCtx();
+  try{
+    connectGain(audio);
+    if(ctx && ctx.state==='suspended') ctx.resume();
+  }catch(e){}
+  // GainNode + audio.volume 둘 다 설정 (호환성)
+  const vol=getVolume();
+  if(_gainNode) _gainNode.gain.value=vol;
+  audio.volume=vol;
+  audio.play().catch(()=>{});
+  musicPlaying=true; _isMuted=false;
+  updateMusicIcon();
+}
+
+function stopMusic(){
+  // 모든 오디오 정지
+  Object.values(_audioEls).forEach(a=>{a.pause();a.currentTime=0;});
+  musicPlaying=false; _isMuted=false;
+  const vol=getVolume();
+  if(_gainNode) _gainNode.gain.value=vol;
+  updateMusicIcon();
+}
+
+function loadTrack(id){
+  const wasPlaying=musicPlaying && !_isMuted;
+  // 현재 곡 정지
+  const cur=_audioEls[_currentTrackId];
+  if(cur){cur.pause();cur.currentTime=0;}
+  _currentTrackId=id;
+  localStorage.setItem('chika_track',id);
+  if(wasPlaying){
+    startMusic();
+  }
+}
+
+function toggleMusic(){
+  if(_isMuted){
+    // 언뮤트
+    _isMuted=false;
+    const vol=getVolume();
+    if(_gainNode) _gainNode.gain.value=vol;
+    const audio=getAudioEl(_currentTrackId);
+    audio.volume=vol;
+    if(audio.paused){
+      connectGain(audio);
+      const ctx=getAudioCtx();
+      if(ctx&&ctx.state==='suspended') ctx.resume();
+      audio.play().catch(()=>{});
+    }
+    musicPlaying=true;
+    updateMusicIcon();
+  } else if(musicPlaying){
+    // 뮤트 (볼륨만 0, 재생 유지)
+    _isMuted=true;
+    if(_gainNode) _gainNode.gain.value=0;
+    const audio=_audioEls[_currentTrackId];
+    if(audio) audio.volume=0;
+    musicPlaying=false;
+    updateMusicIcon();
+  } else {
+    startMusic();
+  }
+}
+
+function updateMusicIcon(){
+  const btn=document.getElementById('musicBtn');
+  if(!btn)return;
+  const vol=getVolume();
+  if(_isMuted||!musicPlaying){btn.textContent='🔇';return;}
+  btn.textContent=vol===0?'🔇':vol<0.4?'🔉':'🎵';
+}
+
 function setVolume(v){
   const vol=parseInt(v)/100;
-  // 뮤트 중이면 GainNode는 건드리지 않음 (슬라이더 값만 저장)
-  if(!_isMuted && _gainNode) _gainNode.gain.value=vol;
-  // 슬라이더 그라디언트
+  if(!_isMuted){
+    if(_gainNode) _gainNode.gain.value=vol;
+    const audio=_audioEls[_currentTrackId];
+    if(audio) audio.volume=vol;
+  }
   const s=document.getElementById('volSlider');
   if(s) s.style.background=`linear-gradient(to right,#7c4dff 0%,#7c4dff ${v}%,#d0c8f0 ${v}%,#d0c8f0 100%)`;
-  // 아이콘
   const btn=document.getElementById('musicBtn');
   if(btn){
-    if(!musicPlaying) btn.textContent='🔇';
-    else if(parseInt(v)===0) btn.textContent='🔇';
+    if(!musicPlaying||parseInt(v)===0) btn.textContent='🔇';
     else if(parseInt(v)<40) btn.textContent='🔉';
     else btn.textContent='🎵';
   }
 }
+
 function fadeOutMusic(ms){
-  if(!_gainNode||!musicPlaying)return;
-  const start=_gainNode.gain.value, steps=20, dt=ms/steps; let i=0;
+  if(!musicPlaying)return;
+  const audio=_audioEls[_currentTrackId];
+  const startVol=getVolume();
+  const steps=20, dt=ms/steps; let i=0;
   const iv=setInterval(()=>{
     i++;
-    if(_gainNode) _gainNode.gain.value=Math.max(0,start*(1-i/steps));
+    const v=Math.max(0,startVol*(1-i/steps));
+    if(_gainNode) _gainNode.gain.value=v;
+    if(audio) audio.volume=v;
     if(i>=steps){
       clearInterval(iv);
       stopMusic();
-      // 볼륨 슬라이더 값으로 복원
-      const sv=document.getElementById('volSlider');
-      if(_gainNode&&sv) _gainNode.gain.value=parseInt(sv.value)/100;
     }
   },dt);
 }
@@ -1526,6 +1530,7 @@ function awardSticker(){
 const PARENT_PIN='1234';
 let dashUnlocked=false;
 let _pinBuffer='', _pinCallback=null;
+let _pinMode='verify', _pinFirstEntry='';
 let _confirmCallback=null;
 function customConfirm(msg, sub, emoji, cb){
   document.getElementById('confirmMsg').textContent=msg;
@@ -1540,46 +1545,70 @@ function confirmAnswer(yes){
   if(cb) cb(yes);
 }
 
+function setPinTitle(title, sub){
+  const m=document.getElementById('pinModal');
+  m.querySelector('.pin-title').textContent=title;
+  m.querySelector('.pin-sub').textContent=sub;
+}
+
 function pinInput(n){
   if(_pinBuffer.length>=4)return;
   _pinBuffer+=n;
   updatePinDots();
-  if(_pinBuffer.length===4) setTimeout(checkPin,150);
+  if(_pinBuffer.length===4) setTimeout(processPinComplete,150);
 }
-function pinDelete(){
-  _pinBuffer=_pinBuffer.slice(0,-1);
-  updatePinDots();
-}
-function pinClear(){
-  _pinBuffer='';
-  updatePinDots();
-}
+function pinDelete(){ _pinBuffer=_pinBuffer.slice(0,-1); updatePinDots(); }
+function pinClear(){ _pinBuffer=''; updatePinDots(); }
 function updatePinDots(){
   for(let i=0;i<4;i++){
     const d=document.getElementById('pd'+i);
     if(d) d.classList.toggle('filled',i<_pinBuffer.length);
   }
 }
-function checkPin(){
+function pinShakeError(){
+  const m=document.getElementById('pinModal');
+  m.style.animation='pinShake 0.4s';
+  setTimeout(()=>{m.style.animation='';_pinBuffer='';updatePinDots();},400);
+}
+
+function processPinComplete(){
   const stored=localStorage.getItem('chika_pin')||PARENT_PIN;
-  if(_pinBuffer===stored){
-    closePinModal();
-    dashUnlocked=true;
-    clearTimeout(_dashLockTimer);
-    if(_pinCallback){_pinCallback();_pinCallback=null;}
-  } else {
-    // 틀림 - 진동 + 초기화
-    document.getElementById('pinModal').style.animation='pinShake 0.4s';
-    setTimeout(()=>{
-      document.getElementById('pinModal').style.animation='';
+  if(_pinMode==='verify'){
+    if(_pinBuffer===stored){
+      closePinModal();
+      dashUnlocked=true;
+      clearTimeout(_dashLockTimer);
+      const cb=_pinCallback;_pinCallback=null;
+      if(cb)cb();
+    } else { pinShakeError(); }
+  } else if(_pinMode==='new1'){
+    // 새 PIN 1차 입력 완료
+    _pinFirstEntry=_pinBuffer;
+    _pinBuffer='';updatePinDots();
+    _pinMode='new2';
+    setPinTitle('새 비밀번호 확인','한 번 더 입력해주세요');
+  } else if(_pinMode==='new2'){
+    if(_pinBuffer===_pinFirstEntry){
+      localStorage.setItem('chika_pin',_pinFirstEntry);
+      closePinModal();
+      _pinMode='verify';
+      setPinTitle('🔐 부모님 확인','4자리 비밀번호를 입력해주세요');
+      setTimeout(()=>alert('비밀번호가 변경됐어요! ✅'),150);
+    } else {
+      // 2차 불일치 - 1차부터 다시
       _pinBuffer='';updatePinDots();
-    },400);
+      _pinMode='new1';
+      setPinTitle('새 비밀번호 입력','일치하지 않아요. 다시 입력해주세요');
+      const m=document.getElementById('pinModal');
+      m.style.animation='pinShake 0.4s';setTimeout(()=>m.style.animation='',400);
+    }
   }
 }
+
 function openPinModal(cb){
-  _pinBuffer='';_pinCallback=cb;updatePinDots();
+  _pinBuffer='';_pinCallback=cb;_pinMode='verify';updatePinDots();
+  setPinTitle('🔐 부모님 확인','4자리 비밀번호를 입력해주세요');
   document.getElementById('pinOverlay').classList.add('open');
-  // AudioContext resume (모달 열 때 사용자 제스처로 처리)
   if(_audioCtx&&_audioCtx.state==='suspended') _audioCtx.resume();
 }
 function closePinModal(){
@@ -1851,39 +1880,14 @@ function deleteProfile(){
   updateSelectGreeting();
 }
 function changePin(){
+  // 기존 PIN 확인 후 새 PIN 입력 모드로
   openPinModal(()=>{
-    // 기존 PIN 확인 후 새 PIN 입력
-    openNewPinModal();
+    _pinBuffer='';_pinMode='new1';updatePinDots();
+    setPinTitle('새 비밀번호 입력','새 4자리를 입력해주세요');
+    document.getElementById('pinOverlay').classList.add('open');
   });
 }
-function openNewPinModal(){
-  // 새 PIN 입력 - 간단히 두번 입력
-  let first='';
-  _pinBuffer=''; _pinCallback=null; updatePinDots();
-  document.getElementById('pinModal').querySelector('.pin-title').textContent='새 비밀번호 입력';
-  document.getElementById('pinModal').querySelector('.pin-sub').textContent='새 4자리를 입력해주세요';
-  document.getElementById('pinOverlay').classList.add('open');
-  _pinCallback=()=>{
-    first=_pinBuffer;
-    _pinBuffer=''; updatePinDots();
-    document.getElementById('pinModal').querySelector('.pin-sub').textContent='한 번 더 입력해주세요';
-    _pinCallback=()=>{
-      if(_pinBuffer===first){
-        localStorage.setItem('chika_pin',first);
-        closePinModal();
-        document.getElementById('pinModal').querySelector('.pin-title').textContent='🔐 부모님 확인';
-        document.getElementById('pinModal').querySelector('.pin-sub').textContent='4자리 비밀번호를 입력해주세요';
-        setTimeout(()=>alert('비밀번호가 변경됐어요! ✅'),100);
-      } else {
-        closePinModal();
-        document.getElementById('pinModal').querySelector('.pin-title').textContent='🔐 부모님 확인';
-        document.getElementById('pinModal').querySelector('.pin-sub').textContent='4자리 비밀번호를 입력해주세요';
-        setTimeout(()=>alert('비밀번호가 일치하지 않아요!'),100);
-      }
-    };
-    // checkPin 재정의 없이 직접 처리
-  };
-}
+
 function resetAllData(){if(confirm('모든 데이터를 지울까요?')){['chika_count','chika_attend','chika_pin','chika_steps'].forEach(k=>localStorage.removeItem(k));closeDashboard();dashUnlocked=false;alert('초기화 완료!');}}
 
 // ════════════════════════════════════════
