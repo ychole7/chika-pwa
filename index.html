@@ -1558,8 +1558,11 @@ function releaseWakeLock(){
   if(_wakeLock){_wakeLock.release();_wakeLock=null;console.log('[WakeLock] 해제');}
 }
 
+let _inSession=false;     // 양치 세션 진행 중 플래그
+let _pendingStart=null;   // 인사말 후 시작 콜백 (취소용)
 function startTimer(){
   if(running)return;
+  _inSession=true;
   if(!musicPlaying)startMusic();
   requestWakeLock();
   document.getElementById('btnStart').style.display='none';
@@ -1578,11 +1581,13 @@ function startTimer(){
     const greeting=rand(SCRIPTS.start);
     showBubble(greeting);
     // 인사말 음성 재생 후 카운트 시작
-    speakThen(greeting, ()=>{
+    _pendingStart=()=>{
+      if(!_inSession) return; // 취소됐으면 시작 안 함
       running=true; animRoad(true);
-      updateStep();      // 첫 단계 멘트 + 애니메이션
-      beginCountdown();  // 이제부터 시간 카운트
-    });
+      updateStep();
+      beginCountdown();
+    };
+    speakThen(greeting, ()=>{ if(_pendingStart) _pendingStart(); });
   }
 }
 function beginCountdown(){
@@ -1603,6 +1608,7 @@ function pauseTimer(){
   const s=rand(SCRIPTS.pause);showBubble(s);speak(s);
 }
 function finishTimer(){
+  _inSession=false; _pendingStart=null;
   clearInterval(foamIv);animRoad(false);startRenderLoop('done');
   releaseWakeLock();
   document.getElementById('btnPause').style.display='none';
@@ -1639,6 +1645,7 @@ function finishTimer(){
   awardSticker();
 }
 function resetTimer(){
+  _inSession=false;_pendingStart=null;
   remaining=TOTAL;currentStep=-1;clearInterval(timerIv);running=false;clearInterval(foamIv);animRoad(false);
   updateTimer();updateRing();startRenderLoop('idle');
   document.getElementById('btnStart').style.display='block';document.getElementById('btnStart').textContent='🪥 치카치카 시작!';
@@ -1648,9 +1655,9 @@ function resetTimer(){
   for(let i=0;i<STEP_COUNT;i++){const st=document.getElementById('st'+i);if(st)st.classList.remove('lit');const p=document.getElementById('sp'+i);if(p)p.classList.remove('active','done');}
 }
 function goBack(){
-  // 양치 진행 중이면 확인
-  if(running){
-    customConfirm('지금 그만두고 캐릭터를 바꿀까요?', '지금까지 한 건 저장되지 않아요', '🤔', (yes)=>{
+  // 양치 세션 중이면 확인 (인사말 단계 포함)
+  if(_inSession){
+    customConfirm('지금 그만두고 친구를 바꿀까요?', '지금까지 한 건 저장되지 않아요', '🤔', (yes)=>{
       if(yes) doGoBack();
     });
     return;
@@ -1658,6 +1665,7 @@ function goBack(){
   doGoBack();
 }
 function doGoBack(){
+  _inSession=false; _pendingStart=null; // 세션 종료 + 인사말 콜백 취소
   clearInterval(timerIv);running=false;clearInterval(foamIv);animRoad(false);
   releaseWakeLock();
   stopTTS();
