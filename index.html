@@ -102,6 +102,11 @@ body{font-family:'Jua',sans-serif;background:linear-gradient(160deg,#c8edff 0%,#
 .parent-btn{width:100%;padding:8px;border:1.5px dashed #d0c8f0;border-radius:15px;background:transparent;font-family:'Jua',sans-serif;font-size:0.78rem;color:#b0a0d8;cursor:pointer;margin-top:5px;}
 .done-banner{display:none;border-radius:13px;padding:9px;margin-bottom:9px;font-size:1.05rem;color:#4a3800;animation:bumpIn 0.5s cubic-bezier(.34,1.56,.64,1) forwards;}
 @keyframes bumpIn{from{transform:scale(0.6);opacity:0}to{transform:scale(1);opacity:1}}
+#toast{position:fixed;top:30px;left:50%;transform:translateX(-50%) translateY(-100px);
+  background:#5533aa;color:white;padding:14px 24px;border-radius:16px;font-family:'Jua',sans-serif;
+  font-size:0.95rem;z-index:9999;opacity:0;transition:all 0.35s cubic-bezier(.34,1.56,.64,1);
+  box-shadow:0 8px 30px rgba(85,51,170,0.4);max-width:85vw;text-align:center;white-space:pre-line;line-height:1.4;}
+#toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
 .tts-indicator{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.6);color:white;border-radius:20px;padding:8px 16px;font-size:0.78rem;opacity:0;transition:opacity 0.3s;z-index:500;pointer-events:none;}
 .tts-indicator.show{opacity:1;}
 
@@ -227,6 +232,7 @@ body{font-family:'Jua',sans-serif;background:linear-gradient(160deg,#c8edff 0%,#
 });
 </script>
 
+<div id="toast"></div>
 <div class="tts-indicator" id="ttsIndicator">🔊 말하는 중...</div>
 <!-- PIN 입력 모달 -->
 <div id="pinOverlay">
@@ -724,8 +730,23 @@ function initVoices(){
   _koVoice=vs.find(v=>v.lang==='ko-KR'&&v.name.includes('Google'))||vs.find(v=>v.lang==='ko-KR'&&/여|female|girl/i.test(v.name))||vs.find(v=>v.lang.startsWith('ko-'))||vs.find(v=>v.lang.startsWith('ko'));
 }
 if(speechSynthesis.onvoiceschanged!==undefined)speechSynthesis.onvoiceschanged=initVoices;
+// iOS Safari: 긴 발화 중 끊김 방지 (pause/resume 핑퐁)
+setInterval(()=>{
+  if(window.speechSynthesis && speechSynthesis.speaking && !speechSynthesis.paused){
+    try{ speechSynthesis.pause(); speechSynthesis.resume(); }catch(e){}
+  }
+},5000);
 setTimeout(initVoices,300);
 
+let _toastTimer=null;
+function toast(msg){
+  const el=document.getElementById('toast');
+  if(!el)return;
+  el.textContent=msg;
+  el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer=setTimeout(()=>el.classList.remove('show'),2500);
+}
 function wn(t){ return t.replace(/\{name\}/g,getChildName()); }
 function preprocess(t){ return t.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]/gu,'').replace(/아~/g,'아,').replace(/야~/g,'야,').replace(/~/g,',').trim(); }
 // 텍스트 → TTS 키 매핑
@@ -770,23 +791,57 @@ function getTTSKey(text){
 }
 
 let _lastSpeakText='', _lastSpeakTime=0;
+// 음성 재생 후 콜백 실행 (인사말 → 카운트 시작용)
+function speakThen(raw, onDone){
+  const text=preprocess(wn(raw));
+  let done=false;
+  const finish=()=>{ if(done)return; done=true; if(onDone)onDone(); };
+  if(!window.speechSynthesis || !text){
+    // TTS 없으면 글자수 기반 추정 시간 후 진행
+    setTimeout(finish, Math.max(1500, text.length*120));
+    return;
+  }
+  _lastSpeakText=text; _lastSpeakTime=Date.now();
+  try{ speechSynthesis.cancel(); }catch(e){}
+  const u=new SpeechSynthesisUtterance(text);
+  u.lang='ko-KR';u.volume=1.0;
+  u.rate=1.0; u.pitch=1.1;
+  if(_koVoice)u.voice=_koVoice;
+  u.onend=finish;
+  u.onerror=finish;
+  // 안전장치: 글자수 기반 예상시간 + 여유 (음성 콜백 안 와도 진행)
+  const estMs = Math.max(2000, text.length*180 + 800);
+  setTimeout(finish, estMs);
+  setTimeout(()=>{
+    try{
+      if(speechSynthesis.speaking) speechSynthesis.cancel();
+      speechSynthesis.speak(u);
+    }catch(e){ finish(); }
+  },150);
+}
 function speak(raw){
   if(!window.speechSynthesis)return;
   const text = preprocess(wn(raw));
   if(!text)return;
-  // 같은 텍스트가 1.5초 내 중복 호출되면 무시 (이름 중복 방지)
   const now=Date.now();
   if(text===_lastSpeakText && now-_lastSpeakTime<1500) return;
   _lastSpeakText=text; _lastSpeakTime=now;
-  stopTTS();
-  speechSynthesis.cancel();
+  // iOS Safari 안정화: cancel 후 충분히 지연
+  try{ speechSynthesis.cancel(); }catch(e){}
   const u=new SpeechSynthesisUtterance(text);
   u.lang='ko-KR';u.volume=1.0;
   const sl=getTimeSlot();
-  u.rate=sl==='morning'?1.02:sl==='evening'?0.9:1.05;
-  u.pitch=sl==='morning'?1.2:sl==='evening'?1.05:1.15;
+  u.rate=sl==='morning'?1.0:sl==='evening'?0.92:1.0;
+  u.pitch=sl==='morning'?1.15:sl==='evening'?1.05:1.1;
   if(_koVoice)u.voice=_koVoice;
-  setTimeout(()=>{try{speechSynthesis.speak(u);}catch(e){}},80);
+  // cancel 직후 speak는 iOS에서 씹히므로 150ms 지연
+  setTimeout(()=>{
+    try{
+      // 혹시 아직 말하는 중이면 한번 더 취소
+      if(speechSynthesis.speaking) speechSynthesis.cancel();
+      speechSynthesis.speak(u);
+    }catch(e){}
+  },150);
 }
 function drainTTS(){
   if(!ttsQueue.length){ttsSpeaking=false;hideTTSInd();return;}
@@ -805,14 +860,14 @@ function hideTTSInd(){ document.getElementById('ttsIndicator').classList.remove(
 const SCRIPTS={
   start:['{name}아, 드디어 치카치카 시간이다! 같이 해볼까?','{name}아, 칫솔 들었지? 이제 신나게 닦아보자!'],
   steps:[
-    ['{name}아, 왼쪽 아랫니! 요기 숨어있는 밥풀, 없애버리자!','아랫니 왼쪽을 꼼꼼하게, 충치 벌레가 못 오게!'],
-    ['{name}아, 이번엔 반대쪽! 오른쪽 아랫니도 닦아줘야지!','오른쪽 아래도 잊으면 안 돼, 열심히 닦자!'],
-    ['{name}아, 위로 올라왔어! 왼쪽 윗니 차례야, 준비됐지?','왼쪽 윗니를 꼼꼼하게 닦으면, 이가 반짝반짝해져!'],
-    ['{name}아, 오른쪽 윗니도 닦아야 해! 거의 다 왔어!','윗니 오른쪽! 칫솔을 위아래로, 씩씩하게 움직여봐!'],
-    ['{name}아, 앞니 닦기! 웃을 때 제일 먼저 보이는 이잖아!','반짝반짝 앞니! 사진 찍을 때 보이는 이니까, 잘 닦자!'],
-    ['{name}아, 마무리 닦기! 구석구석, 한 번 더 싹!','마지막으로 전체를 쓱싹쓱싹! 깨끗하게 마무리하자!'],
-    ['{name}아, 혀도 닦아야 해! 살살 닦자!','혀 닦기! 앞으로 쓱쓱, 간지럽지? 그래도 해야 해!'],
-    ['{name}아, 마지막은 가글! 물 한 모금 물고, 부글부글 해봐!','가글 타임! 입에 물 넣고, 구석구석 헹궈봐!'],
+    ['왼쪽 아랫니! 요기 숨어있는 밥풀, 없애버리자!','아랫니 왼쪽을 꼼꼼하게, 충치 벌레가 못 오게!'],
+    ['이번엔 반대쪽! 오른쪽 아랫니도 닦아줘야지!','오른쪽 아래도 잊으면 안 돼, 열심히 닦자!'],
+    ['위로 올라왔어! 왼쪽 윗니 차례야, 준비됐지?','왼쪽 윗니를 꼼꼼하게 닦으면, 이가 반짝반짝해져!'],
+    ['오른쪽 윗니도 닦아야 해! 거의 다 왔어!','윗니 오른쪽! 칫솔을 위아래로, 씩씩하게 움직여봐!'],
+    ['앞니 닦기! 웃을 때 제일 먼저 보이는 이잖아!','반짝반짝 앞니! 사진 찍을 때 보이는 이니까, 잘 닦자!'],
+    ['마무리 닦기! 구석구석, 한 번 더 싹!','마지막으로 전체를 쓱싹쓱싹! 깨끗하게 마무리하자!'],
+    ['혀도 닦아야 해! 살살 닦자!','혀 닦기! 앞으로 쓱쓱, 간지럽지? 그래도 해야 해!'],
+    ['마지막은 가글! 물 한 모금 물고, 부글부글 해봐!','가글 타임! 입에 물 넣고, 구석구석 헹궈봐!'],
   ],
   done:['{name}아, 이 닦기 완료! 이가 반짝반짝 빛나고 있어! 최고야!','{name}아, 완벽해! 충치 벌레들이 도망갔어! 오늘도 정말 잘했어!'],
   pause:['{name}아, 잠깐 쉬어가자, 준비되면 다시 눌러!'],
@@ -835,12 +890,12 @@ async function prefetchScript(idx, charName){
 function getScript(stepIdx,charName){
   const key=`${charName}_${stepIdx}`;
   const cached = scriptCache[key];
-  if(cached){
-    // Claude API 멘트는 이름이 없으므로 앞에 {name}아, 붙임
-    return '{name}아, ' + cached;
+  let msg = cached || rand(SCRIPTS.steps[stepIdx]||SCRIPTS.steps[0]);
+  // 50% 확률로 이름 앞에 붙이기 (매번 부르면 부담스러우니 랜덤)
+  if(Math.random() < 0.5){
+    msg = '{name}아, ' + msg;
   }
-  // 기본 SCRIPTS (이미 {name} 포함)
-  return rand(SCRIPTS.steps[stepIdx]||SCRIPTS.steps[0]);
+  return msg;
 }
 
 // ════════════════════════════════════════
@@ -1266,7 +1321,7 @@ function addProfile(){
   name=name.trim();
   // 중복 이름 체크
   if(profiles.some(p=>p.name===name)){
-    alert(`"${name}"는 이미 있어요!\n다른 이름이나 별명을 써주세요.\n예) ${name}(첫째), ${name}동생`);
+    toast(`"${name}"는 이미 있어요!\n다른 이름이나 별명을 써주세요.\n예) ${name}(첫째), ${name}동생`);
     return;
   }
   const colors=['#7c4dff','#FF6EB4','#1A9ADB','#4CD964','#FFD600','#FF8C42'];
@@ -1506,21 +1561,36 @@ function releaseWakeLock(){
 function startTimer(){
   if(running)return;
   if(!musicPlaying)startMusic();
-  running=true; animRoad(true);
-  requestWakeLock(); // 화면 꺼짐 방지
+  requestWakeLock();
   document.getElementById('btnStart').style.display='none';
   document.getElementById('btnPause').style.display='block';
+
   if(currentStep>=0 && remaining!==TOTAL){
-    // 일시정지 후 재개
+    // 일시정지 후 재개 - 바로 카운트
+    running=true; animRoad(true);
     startRenderLoop('brushing',STEP_META[currentStep].animStep);
+    beginCountdown();
   } else {
-    // 처음 시작 - 인삿말은 말풍선으로만 표시 (음성 X, 겹침 방지)
+    // 처음 시작 - 인사말 먼저, 끝나면 카운트 시작
     currentStep=-1;
+    remaining=TOTAL;
+    updateTimer();
     const greeting=rand(SCRIPTS.start);
-    showBubble(greeting); // 음성 없이 말풍선만
-    // 첫 단계 멘트(음성)는 1초 후 updateStep에서 자연스럽게 시작됨
+    showBubble(greeting);
+    // 인사말 음성 재생 후 카운트 시작
+    speakThen(greeting, ()=>{
+      running=true; animRoad(true);
+      updateStep();      // 첫 단계 멘트 + 애니메이션
+      beginCountdown();  // 이제부터 시간 카운트
+    });
   }
-  timerIv=setInterval(()=>{remaining--;updateTimer();updateRing();updateStep();if(remaining<=0){clearInterval(timerIv);running=false;finishTimer();}},1000);
+}
+function beginCountdown(){
+  clearInterval(timerIv);
+  timerIv=setInterval(()=>{
+    remaining--;updateTimer();updateRing();updateStep();
+    if(remaining<=0){clearInterval(timerIv);running=false;finishTimer();}
+  },1000);
 }
 function pauseTimer(){
   clearInterval(timerIv);running=false;animRoad(false);clearInterval(foamIv);
@@ -1717,7 +1787,7 @@ function processPinComplete(){
       closePinModal();
       _pinMode='verify';
       setPinTitle('🔐 부모님 확인','4자리 비밀번호를 입력해주세요');
-      setTimeout(()=>alert('비밀번호가 변경됐어요! ✅'),150);
+      setTimeout(()=>toast('비밀번호가 변경됐어요! ✅'),150);
     } else {
       // 2차 불일치 - 1차부터 다시
       _pinBuffer='';updatePinDots();
@@ -1956,7 +2026,7 @@ function renderStepSettings(settings){
 
 function saveDashSettings(){
   const rows=[...document.querySelectorAll('#stepSettingArea .step-setting-row')];
-  if(!rows.length){alert('설정을 불러올 수 없어요.');return;}
+  if(!rows.length){toast('설정을 불러올 수 없어요.');return;}
   const allSettings=loadStepSettings();
   // DOM 순서 기반으로 새 설정 배열 생성
   const newSettings=rows.map(row=>{
@@ -1970,9 +2040,9 @@ function saveDashSettings(){
       sec:sec?Math.max(5,Math.min(60,parseInt(sec.value)||20)):orig.sec,
     };
   });
-  if(!newSettings.some(s=>s.enabled)){alert('최소 1개 이상 선택해주세요!');return;}
+  if(!newSettings.some(s=>s.enabled)){toast('최소 1개 이상 선택해주세요!');return;}
   saveStepSettings(newSettings);
-  alert('저장됐어요! ✅\n다음 치카치카부터 적용돼요.');
+  toast('저장됐어요! ✅\n다음 치카치카부터 적용돼요.');
 }
 function changeName(){
   const profiles=loadProfiles();
@@ -1982,7 +2052,7 @@ function changeName(){
   const name=n.trim();
   // 다른 프로필과 중복 체크
   if(profiles.some((p,i)=>i!==idx&&p.name===name)){
-    alert(`"${name}"는 이미 있어요!\n다른 이름이나 별명을 써주세요.`);
+    toast(`"${name}"는 이미 있어요!\n다른 이름이나 별명을 써주세요.`);
     return;
   }
   setChildName(name);
@@ -1992,7 +2062,7 @@ function changeName(){
 }
 function deleteProfile(){
   const profiles=loadProfiles();
-  if(profiles.length<=1){alert('마지막 프로필은 삭제할 수 없어요!');return;}
+  if(profiles.length<=1){toast('마지막 프로필은 삭제할 수 없어요!');return;}
   const name=getChildName();
   if(!confirm(`${name} 프로필을 삭제할까요?\n(기록이 모두 사라져요)`))return;
   const idx=getActiveProfileIdx();
@@ -2012,7 +2082,7 @@ function changePin(){
   });
 }
 
-function resetAllData(){if(confirm('모든 데이터를 지울까요?')){['chika_count','chika_attend','chika_pin','chika_steps'].forEach(k=>localStorage.removeItem(k));closeDashboard();dashUnlocked=false;alert('초기화 완료!');}}
+function resetAllData(){if(confirm('모든 데이터를 지울까요?')){['chika_count','chika_attend','chika_pin','chika_steps'].forEach(k=>localStorage.removeItem(k));closeDashboard();dashUnlocked=false;toast('초기화 완료!');}}
 
 // ════════════════════════════════════════
 // 앱 시작
@@ -2177,7 +2247,7 @@ function loadNotifSettings(){
 function saveNotifSettings(s){ localStorage.setItem('chika_notif', JSON.stringify(s)); }
 
 async function requestNotifPermission(){
-  if(!('Notification' in window)){ alert('이 브라우저는 알림을 지원하지 않아요.'); return false; }
+  if(!('Notification' in window)){ toast('이 브라우저는 알림을 지원하지 않아요.'); return false; }
   if(Notification.permission === 'granted') return true;
   const perm = await Notification.requestPermission();
   return perm === 'granted';
@@ -2228,7 +2298,7 @@ function renderNotifSettings(){
 
 async function saveNotifSettings2(){
   const granted = await requestNotifPermission();
-  if(!granted){ alert('알림 권한이 필요해요! 브라우저에서 허용해주세요.'); return; }
+  if(!granted){ toast('알림 권한이 필요해요! 브라우저에서 허용해주세요.'); return; }
   const s = {
     morningOn: document.getElementById('notifMornOn')?.checked||false,
     morningTime: document.getElementById('notifMornTime')?.value||'08:00',
@@ -2237,7 +2307,7 @@ async function saveNotifSettings2(){
   };
   saveNotifSettings(s);
   scheduleNotifications(s);
-  alert('알림 설정이 저장됐어요! ✅\n설정한 시간에 알림이 와요.');
+  toast('알림 설정이 저장됐어요! ✅\n설정한 시간에 알림이 와요.');
 }
 
 // 알림 체크 루프 (앱이 열려있을 때 - 백업용)
