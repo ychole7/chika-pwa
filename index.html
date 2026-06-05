@@ -536,6 +536,12 @@ const STICKERS=[
   {emoji:'🧚',name:'핑크프린세스'},{emoji:'🐧',name:'펭펭'},{emoji:'🐛',name:'굼뜬이'},
   {emoji:'⭐',name:'별별이'},{emoji:'🌟',name:'반짝이'},{emoji:'👑',name:'왕관'},
   {emoji:'💎',name:'다이아'},{emoji:'🎖',name:'금메달'},{emoji:'🏆',name:'트로피'},
+  {emoji:'🦄',name:'유니콘'},{emoji:'🐰',name:'토끼'},{emoji:'🐱',name:'야옹이'},
+  {emoji:'🐶',name:'멍멍이'},{emoji:'🦁',name:'사자왕'},{emoji:'🐯',name:'호랑이'},
+  {emoji:'🐻',name:'곰돌이'},{emoji:'🐼',name:'판다'},{emoji:'🐨',name:'코알라'},
+  {emoji:'🦖',name:'공룡'},{emoji:'🐙',name:'문어'},{emoji:'🦋',name:'나비'},
+  {emoji:'🌈',name:'무지개'},{emoji:'🚀',name:'로켓'},{emoji:'🎨',name:'팔레트'},
+  {emoji:'🎁',name:'선물상자'},{emoji:'💝',name:'하트선물'},{emoji:'🎉',name:'축하'},
 ];
 function loadCount(){
   const p=getActiveProfile();
@@ -747,42 +753,25 @@ function toast(msg){
   clearTimeout(_toastTimer);
   _toastTimer=setTimeout(()=>el.classList.remove('show'),2500);
 }
-function wn(t){ return t.replace(/\{name\}/g,getChildName()); }
-function preprocess(t){ return t.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]/gu,'').replace(/아~/g,'아,').replace(/야~/g,'야,').replace(/~/g,',').trim(); }
-// 텍스트 → TTS 키 매핑
-const TTS_KEY_MAP = {
-  // 시작
-  '드디어 치카치카 시간이다! 같이 해볼까?': 'start_1',
-  '칫솔 들었지? 이제 신나게 닦아보자!': 'start_2',
-  // step0
-  '왼쪽 아랫니! 요기 숨어있는 밥풀, 없애버리자!': 'step0_1',
-  '아랫니 왼쪽을 꼼꼼하게, 충치 벌레가 못 오게!': 'step0_2',
-  // step1
-  '이번엔 반대쪽! 오른쪽 아랫니도 닦아줘야지!': 'step1_1',
-  '오른쪽 아래도 잊으면 안 돼, 열심히 닦자!': 'step1_2',
-  // step2
-  '위로 올라왔어! 왼쪽 윗니 차례야, 준비됐지?': 'step2_1',
-  '왼쪽 윗니를 꼼꼼하게 닦으면, 이가 반짝반짝해져!': 'step2_2',
-  // step3
-  '오른쪽 윗니도 닦아야 해! 거의 다 왔어!': 'step3_1',
-  '윗니 오른쪽! 칫솔을 위아래로, 씩씩하게 움직여봐!': 'step3_2',
-  // step4
-  '앞니 닦기! 웃을 때 제일 먼저 보이는 이잖아!': 'step4_1',
-  '반짝반짝 앞니! 사진 찍을 때 보이는 이니까, 잘 닦자!': 'step4_2',
-  // step5
-  '마무리 닦기! 구석구석, 한 번 더 싹!': 'step5_1',
-  '마지막으로 전체를 쓱싹쓱싹! 깨끗하게 마무리하자!': 'step5_2',
-  // step6
-  '혀도 닦아야 해! 살살 닦자!': 'step6_1',
-  '혀 닦기! 앞으로 쓱쓱, 간지럽지? 그래도 해야 해!': 'step6_2',
-  // step7
-  '마지막은 가글! 물 한 모금 물고, 부글부글 해봐!': 'step7_1',
-  '가글 타임! 입에 물 넣고, 구석구석 헹궈봐!': 'step7_2',
-  // 완료
-  '이 닦기 완료! 이가 반짝반짝 빛나고 있어! 최고야!': 'done_1',
-  '완벽해! 충치 벌레들이 도망갔어! 오늘도 정말 잘했어!': 'done_2',
-  // 일시정지
-  '잠깐 쉬어가자, 준비되면 다시 눌러!': 'pause_1',
+// 한국어 호격조사 처리: 받침 있으면 '아', 없으면 '야'
+function josaName(){
+  const name=getChildName();
+  if(!name||name==='친구') return name;
+  const last=name.charCodeAt(name.length-1);
+  // 한글 음절인지 확인 (가~힣)
+  if(last>=0xAC00 && last<=0xD7A3){
+    const jong=(last-0xAC00)%28; // 종성(받침) 인덱스
+    return name + (jong!==0 ? '아' : '야');
+  }
+  // 한글 아니면 그냥 '야'
+  return name + '야';
+}
+function wn(t){
+  // {name}아, 패턴 → 받침 맞춰서 (이름+아/야)로
+  let result = t.replace(/\{name\}아,/g, josaName()+',');
+  result = result.replace(/\{name\}아/g, josaName());
+  result = result.replace(/\{name\}/g, getChildName());
+  return result;
 };
 function getTTSKey(text){
   // {name} 제거 후 매핑
@@ -1267,9 +1256,9 @@ const CHARS=[
   {id:'tinping',name:'핑크프린세스',emoji:'🧚',color1:'#FF85C2',color2:'#d4006a',bgGrad:['#fff0fa','#ffd6f0'],roadColor:'#9C5B7A',btnGrad:'linear-gradient(135deg,#FF85C2,#d4006a)',draw:drawTinping},
   {id:'pororo',name:'펭펭',emoji:'🐧',color1:'#4FC3F7',color2:'#0288D1',bgGrad:['#e0f7ff','#c5eeff'],roadColor:'#37474F',btnGrad:'linear-gradient(135deg,#4FC3F7,#0288D1)',draw:drawPororo},
   {id:'larva',name:'굼뜬이',emoji:'🐛',color1:'#FFD600',color2:'#F57F17',bgGrad:['#fffde0','#fff8c0'],roadColor:'#5D4037',btnGrad:'linear-gradient(135deg,#FFD600,#F57F17)',draw:drawLarva},
-  {id:'chikamon',name:'치카몬',emoji:'💜',color1:'#9C7AE0',color2:'#6A4BA8',bgGrad:['#f3e5ff','#e1d0ff'],roadColor:'#6A4BA8',btnGrad:'linear-gradient(135deg,#9C7AE0,#6A4BA8)',draw:drawChikamon,hidden:true,unlockAt:50},
-  {id:'byulnari',name:'빛나리',emoji:'⭐',color1:'#FFD54F',color2:'#FFA000',bgGrad:['#fffde7','#fff3c4'],roadColor:'#9E7E2E',btnGrad:'linear-gradient(135deg,#FFD54F,#FFA000)',draw:drawByulnari,hidden:true,unlockAt:100},
-  {id:'rainbowcat',name:'무지개냥',emoji:'🌈',color1:'#FF80AB',color2:'#9C27B0',bgGrad:['#fce4ff','#f3e0ff'],roadColor:'#8E5572',btnGrad:'linear-gradient(135deg,#FF80AB,#9C27B0)',draw:drawRainbowcat,hidden:true,unlockAt:150},
+  {id:'chikamon',name:'치카몬',emoji:'💜',color1:'#9C7AE0',color2:'#6A4BA8',bgGrad:['#f3e5ff','#e1d0ff'],roadColor:'#6A4BA8',btnGrad:'linear-gradient(135deg,#9C7AE0,#6A4BA8)',draw:drawChikamon,hidden:true,unlockAt:30},
+  {id:'byulnari',name:'빛나리',emoji:'⭐',color1:'#FFD54F',color2:'#FFA000',bgGrad:['#fffde7','#fff3c4'],roadColor:'#9E7E2E',btnGrad:'linear-gradient(135deg,#FFD54F,#FFA000)',draw:drawByulnari,hidden:true,unlockAt:50},
+  {id:'rainbowcat',name:'무지개냥',emoji:'🌈',color1:'#FF80AB',color2:'#9C27B0',bgGrad:['#fce4ff','#f3e0ff'],roadColor:'#8E5572',btnGrad:'linear-gradient(135deg,#FF80AB,#9C27B0)',draw:drawRainbowcat,hidden:true,unlockAt:100},
 ];
 
 // ════════════════════════════════════════
@@ -1712,7 +1701,7 @@ function renderAlbum(newIdx){
   document.getElementById('progFill').style.background=`linear-gradient(90deg,${ch.color1},#4CD964)`;
   document.getElementById('progFill').style.width=Math.min(loadCount()/STICKERS.length*100,100)+'%';
   const c2=loadCount();
-  document.getElementById('albumMsg').textContent=c2===0?'첫 스티커를 모아봐요!':c2>=STICKERS.length?'🏆 다 모았어요!':c2+'개 모았어요! '+(STICKERS.length-c2)+'개 더!';
+  document.getElementById('albumMsg').textContent=c2===0?'첫 스티커를 모아봐요!':c2>=STICKERS.length?'🎁 30개 다 모았어요! 선물 받을 시간이에요!':c2+'개 모았어요! '+(STICKERS.length-c2)+'개 더 모으면 선물이 기다려요!';
 }
 function awardSticker(){
   const prev=loadCount(),next=Math.min(prev+1,STICKERS.length);saveCount(next);
