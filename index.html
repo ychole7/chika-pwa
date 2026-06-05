@@ -772,7 +772,8 @@ function wn(t){
   result = result.replace(/\{name\}아/g, josaName());
   result = result.replace(/\{name\}/g, getChildName());
   return result;
-};
+}
+function preprocess(t){ return t.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]/gu,'').replace(/아~/g,'아,').replace(/야~/g,'야,').replace(/~/g,',').trim(); };
 function getTTSKey(text){
   // {name} 제거 후 매핑
   const clean = text.replace(/\{name\}아,\s*/g,'').replace(/\{name\}/g,'').trim();
