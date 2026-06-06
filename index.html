@@ -553,6 +553,16 @@ function saveCount(n){
   if(profiles[idx]){ profiles[idx].stickerCount=n; saveProfiles(profiles); }
   else localStorage.setItem('chika_count',n);
 }
+// 누적 스티커 (대시보드용 - 초기화 안 됨, 계속 +1)
+function loadTotalStickers(){
+  const p=getActiveProfile();
+  return p?(p.totalStickers||0):0;
+}
+function saveTotalStickers(n){
+  const profiles=loadProfiles();
+  const idx=getActiveProfileIdx();
+  if(profiles[idx]){ profiles[idx].totalStickers=n; saveProfiles(profiles); }
+}
 
 // 시간대
 function getTimeSlot(){ const h=new Date().getHours(); return h>=5&&h<12?'morning':h>=12&&h<18?'afternoon':'evening'; }
@@ -1705,10 +1715,29 @@ function renderAlbum(newIdx){
   document.getElementById('albumMsg').textContent=c2===0?'첫 스티커를 모아봐요!':c2>=STICKERS.length?'🎁 30개 다 모았어요! 선물 받을 시간이에요!':c2+'개 모았어요! '+(STICKERS.length-c2)+'개 더 모으면 선물이 기다려요!';
 }
 function awardSticker(){
-  const prev=loadCount(),next=Math.min(prev+1,STICKERS.length);saveCount(next);
-  if(next>prev){
-    // 레벨업 팝업이 있으면 닫힌 후에 스티커 표시
-    const delay = document.getElementById('levelUpOverlay').classList.contains('show') ? 3000 : 2200;
+  const prev=loadCount();
+  // 누적 카운트는 항상 +1 (대시보드용)
+  saveTotalStickers(loadTotalStickers()+1);
+
+  const delay = document.getElementById('levelUpOverlay').classList.contains('show') ? 3000 : 2200;
+
+  if(prev+1 >= STICKERS.length){
+    // 30개 다 채움! → 축하 후 앨범 초기화
+    saveCount(STICKERS.length); // 잠깐 꽉 찬 상태로 표시
+    setTimeout(()=>{
+      openAlbum();renderAlbum(STICKERS.length-1);
+      speak('우와! 스티커 30개를 다 모았어요! 선물을 받을 시간이에요!');
+      // 3초 후 앨범 초기화
+      setTimeout(()=>{
+        saveCount(0);
+        renderAlbum();
+        toast('🎁 새 스티커판을 시작해요!');
+      }, 3500);
+    }, delay);
+  } else {
+    // 일반 스티커 획득
+    const next=prev+1;
+    saveCount(next);
     setTimeout(()=>{
       openAlbum();renderAlbum(next-1);
       speak('새 스티커! '+STICKERS[next-1].name+' 스티커를 받았어!');
@@ -1826,7 +1855,7 @@ function closeDashboard(){
   _dashLockTimer=setTimeout(()=>{dashUnlocked=false;},3*60*1000);
 }
 function renderDashboard(){
-  const data=loadAttendance(),streak=getStreak(),totalDays=getTotalDays(),stickerCount=loadCount();
+  const data=loadAttendance(),streak=getStreak(),totalDays=getTotalDays(),stickerCount=loadTotalStickers();
   const now=new Date(),year=now.getFullYear(),month=now.getMonth();
   const firstDay=new Date(year,month,1).getDay(),daysInMonth=new Date(year,month+1,0).getDate();
   const last7=[];for(let i=6;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);last7.push({key:getDateKey(d),label:['일','월','화','수','목','금','토'][d.getDay()]});}
@@ -2352,6 +2381,7 @@ function initApp(){
     const migratedProfile={
       name:savedName, color:'#7c4dff',
       stickerCount:parseInt(localStorage.getItem('chika_count')||'0'),
+      totalStickers:parseInt(localStorage.getItem('chika_count')||'0'),
       totalCount:parseInt(localStorage.getItem('chika_total')||'0'),
       attendance:JSON.parse(localStorage.getItem('chika_attend')||'{}'),
     };
