@@ -135,6 +135,14 @@ body{font-family:'Jua',sans-serif;background:linear-gradient(160deg,#c8edff 0%,#
 .ds-num{font-size:1.5rem;color:#5533aa;}
 .ds-label{font-size:0.62rem;color:#9090cc;margin-top:1px;}
 .dash-section{font-size:0.85rem;color:#5533aa;margin-bottom:8px;border-left:3px solid #b39ddb;padding-left:8px;}
+/* 대시보드 탭 */
+.dash-tabs{display:flex;gap:6px;margin-bottom:16px;background:#f0ecff;border-radius:14px;padding:5px;}
+.dash-tab{flex:1;padding:10px 4px;border:none;border-radius:10px;background:transparent;
+  font-family:'Jua',sans-serif;font-size:0.85rem;color:#9090cc;cursor:pointer;transition:all 0.2s;}
+.dash-tab.active{background:white;color:#5533aa;box-shadow:0 2px 8px rgba(124,77,255,0.15);}
+.dash-pane{display:none;}
+.dash-pane.active{display:block;animation:fadeInPane 0.3s ease;}
+@keyframes fadeInPane{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 .time-bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;}
 .time-bar{width:100%;border-radius:8px 8px 0 0;min-height:8px;}
 .time-label{font-size:0.62rem;color:#888;text-align:center;line-height:1.4;}
@@ -1545,7 +1553,7 @@ function updateStep(){
 }
 function animRoad(on){document.querySelectorAll('.road-line').forEach(l=>l.style.animationPlayState=on?'running':'paused');}
 
-let _wakeLock=null;
+let _wakeLock=null, _pauseWakeTimer=null;
 async function requestWakeLock(){
   try{
     if('wakeLock' in navigator){
@@ -1570,6 +1578,8 @@ function startTimer(){
 
   if(currentStep>=0 && remaining!==TOTAL){
     // 일시정지 후 재개 - 바로 카운트
+    clearTimeout(_pauseWakeTimer);
+    requestWakeLock(); // 화면 다시 켜둠
     running=true; animRoad(true);
     startRenderLoop('brushing',STEP_META[currentStep].animStep);
     beginCountdown();
@@ -1599,13 +1609,16 @@ function beginCountdown(){
 }
 function pauseTimer(){
   clearInterval(timerIv);running=false;animRoad(false);clearInterval(foamIv);
-  releaseWakeLock();
+  // 일시정지 중에도 화면 유지 (WakeLock 안 풀기)
   stopTTS();
   startRenderLoop('idle');
   document.getElementById('btnPause').style.display='none';
   document.getElementById('btnStart').style.display='block';
   document.getElementById('btnStart').textContent='▶️ 계속!';
   const s=rand(SCRIPTS.pause);showBubble(s);speak(s);
+  // 5분간 방치되면 배터리 위해 화면 잠금 허용
+  clearTimeout(_pauseWakeTimer);
+  _pauseWakeTimer=setTimeout(()=>{ if(!running) releaseWakeLock(); }, 5*60*1000);
 }
 function finishTimer(){
   _inSession=false; _pendingStart=null;
@@ -1865,37 +1878,54 @@ function renderDashboard(){
   document.getElementById('dashTitle').textContent=`📊 ${name}의 양치 기록`;
   const settings=loadStepSettings();
   document.getElementById('dashContent').innerHTML=`
-    <div style="display:flex;gap:10px;margin-bottom:16px;">
-      <div class="dash-stat"><div class="ds-num">${streak}</div><div class="ds-label">🔥 연속</div></div>
-      <div class="dash-stat"><div class="ds-num">${totalDays}</div><div class="ds-label">📅 총일수</div></div>
-      <div class="dash-stat"><div class="ds-num">${weeklyCount}/7</div><div class="ds-label">이번주</div></div>
-      <div class="dash-stat"><div class="ds-num">${stickerCount}</div><div class="ds-label">🎖 스티커</div></div>
+    <div class="dash-tabs">
+      <button class="dash-tab active" onclick="switchDashTab(0)">📊 기록</button>
+      <button class="dash-tab" onclick="switchDashTab(1)">⚙️ 설정</button>
+      <button class="dash-tab" onclick="switchDashTab(2)">🌟 기타</button>
     </div>
-    <div class="dash-section">⏰ 시간대별</div>
-    <div style="display:flex;gap:8px;margin-bottom:16px;">
-      <div class="time-bar-wrap"><div class="time-bar" style="height:${Math.max(8,mC*8)}px;background:#FFB347;"></div><div class="time-label">🌅 아침<br>${mC}회</div></div>
-      <div class="time-bar-wrap"><div class="time-bar" style="height:${Math.max(8,aC*8)}px;background:#4FC3F7;"></div><div class="time-label">☀️ 오후<br>${aC}회</div></div>
-      <div class="time-bar-wrap"><div class="time-bar" style="height:${Math.max(8,eC*8)}px;background:#7c4dff;"></div><div class="time-label">🌙 저녁<br>${eC}회</div></div>
+
+    <!-- 탭1: 기록 -->
+    <div class="dash-pane active" id="dashPane0">
+      <div style="display:flex;gap:10px;margin-bottom:16px;">
+        <div class="dash-stat"><div class="ds-num">${streak}</div><div class="ds-label">🔥 연속</div></div>
+        <div class="dash-stat"><div class="ds-num">${totalDays}</div><div class="ds-label">📅 총일수</div></div>
+        <div class="dash-stat"><div class="ds-num">${weeklyCount}/7</div><div class="ds-label">이번주</div></div>
+        <div class="dash-stat"><div class="ds-num">${stickerCount}</div><div class="ds-label">🎖 스티커</div></div>
+      </div>
+      <div class="dash-section">⏰ 시간대별</div>
+      <div style="display:flex;gap:8px;margin-bottom:16px;">
+        <div class="time-bar-wrap"><div class="time-bar" style="height:${Math.max(8,mC*8)}px;background:#FFB347;"></div><div class="time-label">🌅 아침<br>${mC}회</div></div>
+        <div class="time-bar-wrap"><div class="time-bar" style="height:${Math.max(8,aC*8)}px;background:#4FC3F7;"></div><div class="time-label">☀️ 오후<br>${aC}회</div></div>
+        <div class="time-bar-wrap"><div class="time-bar" style="height:${Math.max(8,eC*8)}px;background:#7c4dff;"></div><div class="time-label">🌙 저녁<br>${eC}회</div></div>
+      </div>
+      <div class="dash-section">📅 이번 달</div>
+      <div class="cal-grid" id="calGrid"></div>
     </div>
-    <div class="dash-section">📅 이번 달</div>
-    <div class="cal-grid" id="calGrid"></div>
-    <div class="dash-section">🦷 단계 설정 <span style="font-size:0.7rem;color:#b0a0d8;font-weight:normal;">☰ 드래그로 순서 변경</span></div>
-    <div id="stepSettingArea"></div>
-    <button onclick="saveDashSettings()" class="dash-btn" style="background:#7c4dff;color:white;">💾 단계 설정 저장</button>
-    <div class="dash-section" style="margin-top:12px;">🌟 캐릭터 성장 현황</div>
-    <div id="growthArea" style="margin-bottom:12px;"></div>
 
-    <div class="dash-section">🔔 양치질 알림</div>
-    <div id="notifArea" style="margin-bottom:12px;"></div>
+    <!-- 탭2: 설정 -->
+    <div class="dash-pane" id="dashPane1">
+      <div class="dash-section">🦷 단계 설정 <span style="font-size:0.7rem;color:#b0a0d8;font-weight:normal;">☰ 드래그로 순서 변경</span></div>
+      <div id="stepSettingArea"></div>
+      <button onclick="saveDashSettings()" class="dash-btn" style="background:#7c4dff;color:white;margin-bottom:14px;">💾 단계 설정 저장</button>
 
-    <div class="dash-section">🎵 배경음악 선택</div>
-    <div id="trackSelectArea" style="margin-bottom:12px;"></div>
+      <div class="dash-section">🔔 양치질 알림</div>
+      <div id="notifArea" style="margin-bottom:14px;"></div>
 
-    <div class="dash-section">⚙️ 기타</div>
-    <button onclick="changeName()" class="dash-btn">✏️ 이름 변경 (${name})</button>
-    <button onclick="deleteProfile()" class="dash-btn" style="background:#fff0f0;color:#c62828;">👤 이 프로필 삭제</button>
-    <button onclick="changePin()" class="dash-btn">🔐 비밀번호 변경</button>
-    <button onclick="resetAllData()" class="dash-btn dash-btn-danger">🗑 전체 초기화</button>
+      <div class="dash-section">🎵 배경음악 선택</div>
+      <div id="trackSelectArea"></div>
+    </div>
+
+    <!-- 탭3: 기타 -->
+    <div class="dash-pane" id="dashPane2">
+      <div class="dash-section">🌟 캐릭터 성장 현황</div>
+      <div id="growthArea" style="margin-bottom:16px;"></div>
+
+      <div class="dash-section">⚙️ 관리</div>
+      <button onclick="changeName()" class="dash-btn">✏️ 이름 변경 (${name})</button>
+      <button onclick="deleteProfile()" class="dash-btn" style="background:#fff0f0;color:#c62828;">👤 이 프로필 삭제</button>
+      <button onclick="changePin()" class="dash-btn">🔐 비밀번호 변경</button>
+      <button onclick="resetAllData()" class="dash-btn dash-btn-danger">🗑 전체 초기화</button>
+    </div>
   `;
   // 단계 설정 렌더 (드래그 가능)
   renderStepSettings(settings);
@@ -1917,6 +1947,16 @@ function renderDashboard(){
     el.innerHTML=`<span>${d}</span>${done?`<span style="font-size:0.5rem;">${rec.morning?'🌅':''}${rec.afternoon?'☀️':''}${rec.evening?'🌙':''}</span>`:''}`;
     cal.appendChild(el);
   }
+}
+function switchDashTab(idx){
+  for(let i=0;i<3;i++){
+    const pane=document.getElementById('dashPane'+i);
+    if(pane) pane.classList.toggle('active', i===idx);
+  }
+  document.querySelectorAll('.dash-tab').forEach((t,i)=>t.classList.toggle('active', i===idx));
+  // 모달 스크롤 맨 위로
+  const modal=document.getElementById('dashModal');
+  if(modal) modal.scrollTop=0;
 }
 // 음악 선택 렌더
 function renderGrowthStatus(){
