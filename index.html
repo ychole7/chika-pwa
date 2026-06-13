@@ -2026,87 +2026,54 @@ function renderStepSettings(settings){
   settings.forEach((s,i)=>{
     const row=document.createElement('div');
     row.className='step-setting-row';
-    row.draggable=true;
     row.dataset.idx=i;
+    const isFirst=i===0, isLast=i===settings.length-1;
     row.innerHTML=`
-      <span class="drag-handle">☰</span>
-      <input type="checkbox" class="sc-chk" ${s.enabled?'checked':''} style="width:18px;height:18px;accent-color:#7c4dff;cursor:pointer;" onclick="event.stopPropagation()">
+      <div style="display:flex;flex-direction:column;gap:1px;">
+        <button onclick="moveStep(${i},-1)" ${isFirst?'disabled':''}
+          style="width:26px;height:20px;border:none;border-radius:6px;background:${isFirst?'#eee':'#ede7ff'};
+          color:${isFirst?'#ccc':'#7c4dff'};font-size:0.7rem;cursor:${isFirst?'default':'pointer'};padding:0;line-height:1;">▲</button>
+        <button onclick="moveStep(${i},1)" ${isLast?'disabled':''}
+          style="width:26px;height:20px;border:none;border-radius:6px;background:${isLast?'#eee':'#ede7ff'};
+          color:${isLast?'#ccc':'#7c4dff'};font-size:0.7rem;cursor:${isLast?'default':'pointer'};padding:0;line-height:1;">▼</button>
+      </div>
+      <input type="checkbox" class="sc-chk" ${s.enabled?'checked':''} style="width:18px;height:18px;accent-color:#7c4dff;cursor:pointer;">
       <span style="font-size:1.1rem;">${s.icon}</span>
       <span style="flex:1;font-size:0.85rem;color:#3d2b8e;">${s.label}</span>
       <input type="number" class="sc-sec" value="${s.sec}" min="5" max="60" step="5"
-        style="width:48px;padding:4px;border:1.5px solid #d0c8f0;border-radius:8px;font-family:'Jua',sans-serif;font-size:0.82rem;text-align:center;"
-        onclick="event.stopPropagation()">
+        style="width:48px;padding:4px;border:1.5px solid #d0c8f0;border-radius:8px;font-family:'Jua',sans-serif;font-size:0.82rem;text-align:center;">
       <span style="font-size:0.7rem;color:#aaa;">초</span>`;
-
-    // 드래그 이벤트 (데스크톱)
-    row.addEventListener('dragstart',e=>{_dragSrc=row;row.classList.add('dragging');e.dataTransfer.effectAllowed='move';});
-    row.addEventListener('dragend',()=>{row.classList.remove('dragging');document.querySelectorAll('.step-setting-row').forEach(r=>r.classList.remove('drag-over'));});
-    row.addEventListener('dragover',e=>{e.preventDefault();if(row!==_dragSrc){document.querySelectorAll('.step-setting-row').forEach(r=>r.classList.remove('drag-over'));row.classList.add('drag-over');}});
-    row.addEventListener('drop',e=>{
-      e.preventDefault();row.classList.remove('drag-over');
-      if(!_dragSrc||_dragSrc===row)return;
-      const area=document.getElementById('stepSettingArea');
-      const rows=[...area.querySelectorAll('.step-setting-row')];
-      const fromIdx=rows.indexOf(_dragSrc),toIdx=rows.indexOf(row);
-      if(fromIdx<toIdx)area.insertBefore(_dragSrc,row.nextSibling);
-      else area.insertBefore(_dragSrc,row);
-    });
-
-    // 터치 드래그 (모바일)
-    let touchStartY=0,touchClone=null;
-    row.addEventListener('touchstart',e=>{
-      _dragSrc=row;touchStartY=e.touches[0].clientY;
-      touchClone=row.cloneNode(true);
-      touchClone.style.cssText=`position:fixed;width:${row.offsetWidth}px;opacity:0.85;z-index:9999;pointer-events:none;border-radius:12px;left:${row.getBoundingClientRect().left}px;top:${row.getBoundingClientRect().top}px;`;
-      document.body.appendChild(touchClone);
-      row.classList.add('dragging');
-    },{passive:true});
-    row.addEventListener('touchmove',e=>{
-      if(!touchClone)return;
-      e.preventDefault();
-      const dy=e.touches[0].clientY-touchStartY;
-      touchClone.style.top=(row.getBoundingClientRect().top+dy)+'px';
-      // 겹치는 row 찾기
-      document.querySelectorAll('.step-setting-row').forEach(r=>r.classList.remove('drag-over'));
-      const el=document.elementFromPoint(e.touches[0].clientX,e.touches[0].clientY);
-      const target=el&&el.closest('.step-setting-row');
-      if(target&&target!==row)target.classList.add('drag-over');
-    },{passive:false});
-    row.addEventListener('touchend',e=>{
-      if(touchClone){touchClone.remove();touchClone=null;}
-      row.classList.remove('dragging');
-      const el=document.elementFromPoint(e.changedTouches[0].clientX,e.changedTouches[0].clientY);
-      const target=el&&el.closest('.step-setting-row');
-      document.querySelectorAll('.step-setting-row').forEach(r=>r.classList.remove('drag-over'));
-      if(target&&target!==row){
-        const area=document.getElementById('stepSettingArea');
-        const rows=[...area.querySelectorAll('.step-setting-row')];
-        const fromIdx=rows.indexOf(row),toIdx=rows.indexOf(target);
-        if(fromIdx<toIdx)area.insertBefore(row,target.nextSibling);
-        else area.insertBefore(row,target);
-      }
-    });
-
     area.appendChild(row);
+  });
+}
+// 단계 위/아래 이동 (현재 입력값 보존)
+function moveStep(idx, dir){
+  const settings=collectStepSettings();
+  const newIdx=idx+dir;
+  if(newIdx<0||newIdx>=settings.length)return;
+  // 순서 교환
+  [settings[idx],settings[newIdx]]=[settings[newIdx],settings[idx]];
+  renderStepSettings(settings);
+}
+// 현재 화면 입력값을 settings 배열로 수집 (화면 순서 그대로)
+function collectStepSettings(){
+  const rows=[...document.querySelectorAll('#stepSettingArea .step-setting-row')];
+  const base=loadStepSettings();
+  return rows.map(row=>{
+    const idx=parseInt(row.dataset.idx);
+    const orig=base[idx]||{};
+    const enabled=row.querySelector('.sc-chk').checked;
+    const sec=parseInt(row.querySelector('.sc-sec').value)||20;
+    // label/icon/animStep은 원본 유지, enabled/sec는 현재값
+    return {label:orig.label, icon:orig.icon, animStep:orig.animStep, enabled, sec};
   });
 }
 
 function saveDashSettings(){
-  const rows=[...document.querySelectorAll('#stepSettingArea .step-setting-row')];
-  if(!rows.length){toast('설정을 불러올 수 없어요.');return;}
-  const allSettings=loadStepSettings();
-  // DOM 순서 기반으로 새 설정 배열 생성
-  const newSettings=rows.map(row=>{
-    const origIdx=parseInt(row.dataset.idx);
-    const orig=allSettings[origIdx];
-    const chk=row.querySelector('.sc-chk');
-    const sec=row.querySelector('.sc-sec');
-    return {
-      label:orig.label, icon:orig.icon, animStep:orig.animStep,
-      enabled:chk?chk.checked:orig.enabled,
-      sec:sec?Math.max(5,Math.min(60,parseInt(sec.value)||20)):orig.sec,
-    };
-  });
+  const newSettings=collectStepSettings();
+  if(!newSettings.length){toast('설정을 불러올 수 없어요.');return;}
+  // sec 범위 보정
+  newSettings.forEach(s=>{ s.sec=Math.max(5,Math.min(60,parseInt(s.sec)||20)); });
   if(!newSettings.some(s=>s.enabled)){toast('최소 1개 이상 선택해주세요!');return;}
   saveStepSettings(newSettings);
   toast('저장됐어요! ✅\n다음 치카치카부터 적용돼요.');
