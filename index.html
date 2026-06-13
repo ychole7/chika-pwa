@@ -2027,33 +2027,93 @@ function renderStepSettings(settings){
     const row=document.createElement('div');
     row.className='step-setting-row';
     row.dataset.idx=i;
-    const isFirst=i===0, isLast=i===settings.length-1;
     row.innerHTML=`
-      <div style="display:flex;flex-direction:column;gap:1px;">
-        <button onclick="moveStep(${i},-1)" ${isFirst?'disabled':''}
-          style="width:26px;height:20px;border:none;border-radius:6px;background:${isFirst?'#eee':'#ede7ff'};
-          color:${isFirst?'#ccc':'#7c4dff'};font-size:0.7rem;cursor:${isFirst?'default':'pointer'};padding:0;line-height:1;">▲</button>
-        <button onclick="moveStep(${i},1)" ${isLast?'disabled':''}
-          style="width:26px;height:20px;border:none;border-radius:6px;background:${isLast?'#eee':'#ede7ff'};
-          color:${isLast?'#ccc':'#7c4dff'};font-size:0.7rem;cursor:${isLast?'default':'pointer'};padding:0;line-height:1;">▼</button>
-      </div>
+      <div class="drag-handle" style="width:40px;height:42px;display:flex;align-items:center;justify-content:center;background:#ede7ff;border-radius:10px;font-size:1.3rem;color:#7c4dff;touch-action:none;cursor:grab;user-select:none;">☰</div>
       <input type="checkbox" class="sc-chk" ${s.enabled?'checked':''} style="width:18px;height:18px;accent-color:#7c4dff;cursor:pointer;">
       <span style="font-size:1.1rem;">${s.icon}</span>
       <span style="flex:1;font-size:0.85rem;color:#3d2b8e;">${s.label}</span>
       <input type="number" class="sc-sec" value="${s.sec}" min="5" max="60" step="5"
         style="width:48px;padding:4px;border:1.5px solid #d0c8f0;border-radius:8px;font-family:'Jua',sans-serif;font-size:0.82rem;text-align:center;">
       <span style="font-size:0.7rem;color:#aaa;">초</span>`;
+
+    const handle=row.querySelector('.drag-handle');
+    // 길게 눌러야 드래그 시작 (0.4초)
+    let holdTimer=null, dragging=false, startY=0, clone=null, ready=false;
+
+    handle.addEventListener('touchstart',e=>{
+      ready=false;
+      holdTimer=setTimeout(()=>{
+        ready=true;
+        // 진동 피드백
+        if(navigator.vibrate) navigator.vibrate(40);
+        startDrag(e.touches[0].clientY);
+      },400);
+    },{passive:true});
+
+    handle.addEventListener('touchmove',e=>{
+      if(!ready){ clearTimeout(holdTimer); return; }
+      e.preventDefault();
+      moveDrag(e.touches[0].clientY, e.touches[0].clientX);
+    },{passive:false});
+
+    handle.addEventListener('touchend',e=>{
+      clearTimeout(holdTimer);
+      if(dragging) endDrag(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+      ready=false;
+    });
+
+    function startDrag(y){
+      dragging=true; startY=y; _dragSrc=row;
+      clone=row.cloneNode(true);
+      const r=row.getBoundingClientRect();
+      clone.style.cssText=`position:fixed;width:${row.offsetWidth}px;left:${r.left}px;top:${r.top}px;opacity:0.9;z-index:9999;pointer-events:none;border-radius:12px;box-shadow:0 8px 24px rgba(124,77,255,0.4);transform:scale(1.03);`;
+      document.body.appendChild(clone);
+      row.style.opacity='0.3';
+    }
+    function moveDrag(y,x){
+      if(!clone)return;
+      const r=row.getBoundingClientRect();
+      clone.style.top=(r.top+(y-startY))+'px';
+      document.querySelectorAll('.step-setting-row').forEach(rr=>rr.classList.remove('drag-over'));
+      const el=document.elementFromPoint(x,y);
+      const target=el&&el.closest('.step-setting-row');
+      if(target&&target!==row) target.classList.add('drag-over');
+    }
+    function endDrag(x,y){
+      if(clone){clone.remove();clone=null;}
+      row.style.opacity='';
+      dragging=false;
+      const el=document.elementFromPoint(x,y);
+      const target=el&&el.closest('.step-setting-row');
+      document.querySelectorAll('.step-setting-row').forEach(rr=>rr.classList.remove('drag-over'));
+      if(target&&target!==row){
+        const rows=[...area.querySelectorAll('.step-setting-row')];
+        const fromIdx=rows.indexOf(row),toIdx=rows.indexOf(target);
+        if(fromIdx<toIdx)area.insertBefore(row,target.nextSibling);
+        else area.insertBefore(row,target);
+      }
+    }
+
+    // 데스크톱 마우스 드래그 (핸들에서만)
+    handle.addEventListener('mousedown',e=>{
+      e.preventDefault();
+      _dragSrc=row;
+      row.draggable=true;
+    });
+    row.addEventListener('dragstart',e=>{if(_dragSrc===row){row.classList.add('dragging');e.dataTransfer.effectAllowed='move';}});
+    row.addEventListener('dragend',()=>{row.classList.remove('dragging');row.draggable=false;document.querySelectorAll('.step-setting-row').forEach(r=>r.classList.remove('drag-over'));});
+    row.addEventListener('dragover',e=>{e.preventDefault();if(row!==_dragSrc){document.querySelectorAll('.step-setting-row').forEach(r=>r.classList.remove('drag-over'));row.classList.add('drag-over');}});
+    row.addEventListener('drop',e=>{
+      e.preventDefault();row.classList.remove('drag-over');
+      if(!_dragSrc||_dragSrc===row)return;
+      const rows=[...area.querySelectorAll('.step-setting-row')];
+      const fromIdx=rows.indexOf(_dragSrc),toIdx=rows.indexOf(row);
+      if(fromIdx<toIdx)area.insertBefore(_dragSrc,row.nextSibling);
+      else area.insertBefore(_dragSrc,row);
+    });
+
     area.appendChild(row);
   });
-}
-// 단계 위/아래 이동 (현재 입력값 보존)
-function moveStep(idx, dir){
-  const settings=collectStepSettings();
-  const newIdx=idx+dir;
-  if(newIdx<0||newIdx>=settings.length)return;
-  // 순서 교환
-  [settings[idx],settings[newIdx]]=[settings[newIdx],settings[idx]];
-  renderStepSettings(settings);
 }
 // 현재 화면 입력값을 settings 배열로 수집 (화면 순서 그대로)
 function collectStepSettings(){
@@ -2064,7 +2124,6 @@ function collectStepSettings(){
     const orig=base[idx]||{};
     const enabled=row.querySelector('.sc-chk').checked;
     const sec=parseInt(row.querySelector('.sc-sec').value)||20;
-    // label/icon/animStep은 원본 유지, enabled/sec는 현재값
     return {label:orig.label, icon:orig.icon, animStep:orig.animStep, enabled, sec};
   });
 }
