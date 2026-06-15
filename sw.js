@@ -1,6 +1,6 @@
 // 치카치카 친구들 - Service Worker
 // 버전 올리면 캐시 갱신됨
-const CACHE_NAME = 'chika-v8';
+const CACHE_NAME = 'chika-v9';
 const ASSETS = [
   './',
   './index.html',
