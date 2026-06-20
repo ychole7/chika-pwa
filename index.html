@@ -73,8 +73,8 @@ body{font-family:'Jua',sans-serif;background:linear-gradient(160deg,#c8edff 0%,#
 /* 단계 */
 .steps-wrap{margin-bottom:8px;}
 .steps-row{display:flex;gap:3px;margin-bottom:3px;}
-.step-pill{flex:1;padding:5px 1px;border-radius:9px;background:#f0f0ff;font-size:0.55rem;color:#9090cc;text-align:center;transition:all 0.3s;line-height:1.2;}
-.step-pill .si{font-size:0.85rem;display:block;margin-bottom:1px;}
+.step-pill{flex:1;padding:7px 2px;border-radius:9px;background:#f0f0ff;font-size:0.7rem;color:#7a7ab8;text-align:center;transition:all 0.3s;line-height:1.2;}
+.step-pill .si{font-size:0.8rem;display:block;margin-bottom:2px;}
 .step-pill.done{background:#d4f5e2;color:#27ae60;}
 .step-pill.active{background:#7c4dff;color:white;transform:scale(1.06);box-shadow:0 3px 9px rgba(124,77,255,0.32);}
 
@@ -1592,7 +1592,7 @@ function renderStepPills(){
   r1.innerHTML='';r2.innerHTML='';
   STEP_META.forEach((s,i)=>{
     const p=document.createElement('div');p.className='step-pill';p.id='sp'+i;
-    p.innerHTML=`<span class="si">${s.icon}</span><span style='font-size:0.5rem;line-height:1.2;'>${s.label}</span>`;
+    p.innerHTML=`<span class="si">${s.icon}</span><span style='font-size:0.7rem;line-height:1.15;font-weight:600;'>${s.label}</span>`;
     (i<Math.ceil(STEP_META.length/2)?r1:r2).appendChild(p);
   });
 }
