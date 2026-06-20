@@ -217,6 +217,11 @@ body{font-family:'Jua',sans-serif;background:linear-gradient(160deg,#c8edff 0%,#
   color:white;font-family:'Jua',sans-serif;font-size:0.95rem;cursor:pointer;}
 .confirm-no{flex:1;padding:12px;border:1.5px solid #e0d8ff;border-radius:14px;background:white;
   color:#7c4dff;font-family:'Jua',sans-serif;font-size:0.95rem;cursor:pointer;}
+/* 상점 모달 */
+#shopOverlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:460;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.3s;}
+#shopOverlay.open{opacity:1;pointer-events:all;}
+#shopModal{background:white;border-radius:24px;padding:22px;width:330px;max-width:90vw;max-height:85vh;overflow-y:auto;transform:scale(0.85);transition:transform 0.3s cubic-bezier(.34,1.56,.64,1);}
+#shopOverlay.open #shopModal{transform:scale(1);}
 
 /* PWA 설치 배너 *//* PWA 설치 배너 */
 #installBanner{display:none;position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:white;border-radius:20px;padding:14px 18px;box-shadow:0 8px 30px rgba(124,77,255,0.25);border:2px solid #ede7ff;flex-direction:row;align-items:center;gap:12px;z-index:1000;width:380px;max-width:95vw;}
@@ -284,6 +289,21 @@ body{font-family:'Jua',sans-serif;background:linear-gradient(160deg,#c8edff 0%,#
   </div>
 </div>
 
+<!-- 상점 모달 -->
+<div id="shopOverlay">
+  <div id="shopModal">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <div style="font-size:1.2rem;color:#5533aa;">🛒 상점</div>
+      <div id="shopCoins" style="background:linear-gradient(135deg,#FFE082,#FFB300);color:#7a4f00;font-weight:bold;padding:5px 14px;border-radius:18px;font-size:0.9rem;">🪙 0</div>
+    </div>
+    <div style="font-size:0.78rem;color:#999;margin-bottom:14px;">양치를 완료하면 🪙5코인을 받아요!</div>
+    <div class="dash-section" style="margin-bottom:10px;">🎤 목소리</div>
+    <div id="shopVoices"></div>
+    <div style="font-size:0.72rem;color:#b0a0d8;text-align:center;margin:12px 0;">✨ 친구(캐릭터)는 선택 화면에서<br>코인으로 데려올 수 있어요!</div>
+    <button onclick="closeShop()" style="width:100%;padding:12px;border:none;border-radius:14px;background:#7c4dff;color:white;font-family:'Jua',sans-serif;font-size:0.95rem;cursor:pointer;margin-top:6px;">닫기</button>
+  </div>
+</div>
+
 <!-- 레벨업 오버레이 -->
 <div class="level-up-overlay" id="levelUpOverlay">
   <div class="level-up-card">
@@ -324,7 +344,11 @@ body{font-family:'Jua',sans-serif;background:linear-gradient(160deg,#c8edff 0%,#
   <h1>🦷 치카치카 친구들</h1>
   <p class="sub" id="selectSub">같이 이 닦을 친구를 골라봐요!</p>
   <!-- 프로필 전환 -->
-  <div id="profileBar" style="display:flex;gap:8px;align-items:center;justify-content:center;margin-bottom:14px;flex-wrap:wrap;"></div>
+  <div id="profileBar" style="display:flex;gap:8px;align-items:center;justify-content:center;margin-bottom:10px;flex-wrap:wrap;"></div>
+  <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:14px;">
+    <div id="coinDisplay" style="background:linear-gradient(135deg,#FFE082,#FFB300);color:#7a4f00;font-weight:bold;padding:6px 16px;border-radius:20px;font-size:0.9rem;box-shadow:0 2px 8px rgba(255,179,0,0.3);">🪙 0</div>
+    <button onclick="openShop()" style="background:white;border:2px solid #FFB300;color:#FF8C00;padding:6px 16px;border-radius:20px;font-family:'Jua',sans-serif;font-size:0.85rem;cursor:pointer;">🛒 상점</button>
+  </div>
   <div class="char-grid" id="charGrid"></div>
   <button id="selectBtn" disabled onclick="startWithChar()">✨ 이 친구랑 시작!</button>
   <button onclick="openDashboard()" style="width:100%;padding:9px;margin-top:8px;border:1.5px dashed #d0c8f0;border-radius:15px;background:transparent;font-family:'Jua',sans-serif;font-size:0.78rem;color:#b0a0d8;cursor:pointer;">🔐 부모님 대시보드</button>
@@ -561,6 +585,30 @@ function saveCount(n){
   if(profiles[idx]){ profiles[idx].stickerCount=n; saveProfiles(profiles); }
   else localStorage.setItem('chika_count',n);
 }
+// 💰 코인 시스템 (프로필별)
+function loadCoins(){
+  const p=getActiveProfile();
+  return p?(p.coins||0):0;
+}
+function saveCoins(n){
+  const profiles=loadProfiles();
+  const idx=getActiveProfileIdx();
+  if(profiles[idx]){ profiles[idx].coins=n; saveProfiles(profiles); }
+}
+function addCoins(n){ saveCoins(loadCoins()+n); }
+// 구매한 아이템 목록 (프로필별)
+function loadOwned(){
+  const p=getActiveProfile();
+  return p&&p.owned?p.owned:[];
+}
+function saveOwned(arr){
+  const profiles=loadProfiles();
+  const idx=getActiveProfileIdx();
+  if(profiles[idx]){ profiles[idx].owned=arr; saveProfiles(profiles); }
+}
+function isOwned(id){ return loadOwned().includes(id); }
+function addOwned(id){ const o=loadOwned(); if(!o.includes(id)){o.push(id);saveOwned(o);} }
+
 // 누적 스티커 (대시보드용 - 초기화 안 됨, 계속 +1)
 function loadTotalStickers(){
   const p=getActiveProfile();
@@ -813,7 +861,8 @@ function speakThen(raw, onDone){
   try{ speechSynthesis.cancel(); }catch(e){}
   const u=new SpeechSynthesisUtterance(text);
   u.lang='ko-KR';u.volume=1.0;
-  u.rate=1.0; u.pitch=1.1;
+  const vs=getVoiceSetting();
+  u.rate=vs.rate; u.pitch=vs.pitch;
   if(_koVoice)u.voice=_koVoice;
   u.onend=finish;
   u.onerror=finish;
@@ -838,9 +887,8 @@ function speak(raw){
   try{ speechSynthesis.cancel(); }catch(e){}
   const u=new SpeechSynthesisUtterance(text);
   u.lang='ko-KR';u.volume=1.0;
-  const sl=getTimeSlot();
-  u.rate=sl==='morning'?1.0:sl==='evening'?0.92:1.0;
-  u.pitch=sl==='morning'?1.15:sl==='evening'?1.05:1.1;
+  const vs=getVoiceSetting();
+  u.rate=vs.rate; u.pitch=vs.pitch;
   if(_koVoice)u.voice=_koVoice;
   // cancel 직후 speak는 iOS에서 씹히므로 150ms 지연
   setTimeout(()=>{
@@ -865,6 +913,18 @@ function drainTTS(){
 function showTTSInd(){ document.getElementById('ttsIndicator').classList.add('show'); }
 function hideTTSInd(){ document.getElementById('ttsIndicator').classList.remove('show'); }
 
+const SHOP_VOICES=[
+  {id:'voice_high', name:'높은 목소리', emoji:'🐰', price:30, rate:1.0, pitch:1.5},
+  {id:'voice_low', name:'낮은 목소리', emoji:'🐻', price:30, rate:0.95, pitch:0.8},
+  {id:'voice_fast', name:'빠른 목소리', emoji:'🐿️', price:30, rate:1.3, pitch:1.2},
+];
+function getVoiceSetting(){
+  const vid=localStorage.getItem('chika_voice_'+getActiveProfileIdx());
+  if(!vid) return {rate:1.0, pitch:1.1};
+  const v=SHOP_VOICES.find(x=>x.id===vid);
+  return v?{rate:v.rate, pitch:v.pitch}:{rate:1.0, pitch:1.1};
+}
+function setVoiceSetting(vid){ localStorage.setItem('chika_voice_'+getActiveProfileIdx(), vid); }
 const SCRIPTS={
   start:['{name}아, 드디어 치카치카 시간이다! 같이 해볼까?','{name}아, 칫솔 들었지? 이제 신나게 닦아보자!'],
   steps:[
@@ -1275,9 +1335,9 @@ const CHARS=[
   {id:'tinping',name:'핑크프린세스',emoji:'🧚',color1:'#FF85C2',color2:'#d4006a',bgGrad:['#fff0fa','#ffd6f0'],roadColor:'#9C5B7A',btnGrad:'linear-gradient(135deg,#FF85C2,#d4006a)',draw:drawTinping},
   {id:'pororo',name:'펭펭',emoji:'🐧',color1:'#4FC3F7',color2:'#0288D1',bgGrad:['#e0f7ff','#c5eeff'],roadColor:'#37474F',btnGrad:'linear-gradient(135deg,#4FC3F7,#0288D1)',draw:drawPororo},
   {id:'larva',name:'굼뜬이',emoji:'🐛',color1:'#FFD600',color2:'#F57F17',bgGrad:['#fffde0','#fff8c0'],roadColor:'#5D4037',btnGrad:'linear-gradient(135deg,#FFD600,#F57F17)',draw:drawLarva},
-  {id:'chikamon',name:'치카몬',emoji:'💜',color1:'#9C7AE0',color2:'#6A4BA8',bgGrad:['#f3e5ff','#e1d0ff'],roadColor:'#6A4BA8',btnGrad:'linear-gradient(135deg,#9C7AE0,#6A4BA8)',draw:drawChikamon,hidden:true,unlockAt:30},
-  {id:'byulnari',name:'빛나리',emoji:'⭐',color1:'#FFD54F',color2:'#FFA000',bgGrad:['#fffde7','#fff3c4'],roadColor:'#9E7E2E',btnGrad:'linear-gradient(135deg,#FFD54F,#FFA000)',draw:drawByulnari,hidden:true,unlockAt:50},
-  {id:'rainbowcat',name:'무지개냥',emoji:'🌈',color1:'#FF80AB',color2:'#9C27B0',bgGrad:['#fce4ff','#f3e0ff'],roadColor:'#8E5572',btnGrad:'linear-gradient(135deg,#FF80AB,#9C27B0)',draw:drawRainbowcat,hidden:true,unlockAt:100},
+  {id:'chikamon',name:'치카몬',emoji:'💜',color1:'#9C7AE0',color2:'#6A4BA8',bgGrad:['#f3e5ff','#e1d0ff'],roadColor:'#6A4BA8',btnGrad:'linear-gradient(135deg,#9C7AE0,#6A4BA8)',draw:drawChikamon,hidden:true,price:50},
+  {id:'byulnari',name:'빛나리',emoji:'⭐',color1:'#FFD54F',color2:'#FFA000',bgGrad:['#fffde7','#fff3c4'],roadColor:'#9E7E2E',btnGrad:'linear-gradient(135deg,#FFD54F,#FFA000)',draw:drawByulnari,hidden:true,price:100},
+  {id:'rainbowcat',name:'무지개냥',emoji:'🌈',color1:'#FF80AB',color2:'#9C27B0',bgGrad:['#fce4ff','#f3e0ff'],roadColor:'#8E5572',btnGrad:'linear-gradient(135deg,#FF80AB,#9C27B0)',draw:drawRainbowcat,hidden:true,price:150},
 ];
 
 // ════════════════════════════════════════
@@ -1285,6 +1345,63 @@ const CHARS=[
 // ════════════════════════════════════════
 let selectedChar=null, selectedCardEl=null;
 
+function updateCoinDisplay(){
+  const el=document.getElementById('coinDisplay');
+  if(el) el.textContent='🪙 '+loadCoins();
+}
+function openShop(){
+  const ov=document.getElementById('shopOverlay');
+  renderShop();
+  ov.classList.add('open');
+}
+function closeShop(){ document.getElementById('shopOverlay').classList.remove('open'); }
+function renderShop(){
+  updateCoinDisplay();
+  const coins=loadCoins();
+  document.getElementById('shopCoins').textContent='🪙 '+coins;
+  // 목소리 섹션
+  const vArea=document.getElementById('shopVoices');
+  vArea.innerHTML='';
+  const curVoice=localStorage.getItem('chika_voice_'+getActiveProfileIdx())||'';
+  // 기본 목소리
+  const items=[{id:'',name:'기본 목소리',emoji:'🗣️',price:0}].concat(SHOP_VOICES);
+  items.forEach(v=>{
+    const owned = v.id==='' || isOwned(v.id);
+    const selected = curVoice===v.id;
+    const row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:10px;padding:11px;background:'+(selected?'#fff8e8':'#f8f5ff')+';border:2px solid '+(selected?'#FFB300':'#eee')+';border-radius:12px;margin-bottom:7px;';
+    let btn;
+    if(selected){ btn='<span style="color:#FF8C00;font-weight:bold;font-size:0.85rem;">✅ 사용중</span>'; }
+    else if(owned){ btn='<button onclick="selectVoice(\''+v.id+'\')" style="background:#7c4dff;color:white;border:none;padding:7px 14px;border-radius:10px;font-family:Jua;font-size:0.82rem;cursor:pointer;">사용하기</button>'; }
+    else { btn='<button onclick="buyVoice(\''+v.id+'\')" style="background:linear-gradient(135deg,#FFD54F,#FFB300);color:#7a4f00;border:none;padding:7px 14px;border-radius:10px;font-family:Jua;font-size:0.82rem;cursor:pointer;">🪙 '+v.price+'</button>'; }
+    row.innerHTML='<span style="font-size:1.4rem;">'+v.emoji+'</span><span style="flex:1;font-size:0.9rem;color:#3d2b8e;">'+v.name+'</span>'+btn;
+    vArea.appendChild(row);
+  });
+}
+function buyVoice(id){
+  const v=SHOP_VOICES.find(x=>x.id===id);
+  if(!v)return;
+  const coins=loadCoins();
+  if(coins<v.price){
+    customConfirm('코인이 부족해요', '🪙 '+v.price+'코인이 필요해요 (지금 '+coins+'개)', v.emoji, ()=>{});
+    return;
+  }
+  customConfirm(v.name+'을(를) 살까요?', '🪙 '+v.price+'코인을 사용해요', v.emoji, (yes)=>{
+    if(!yes)return;
+    saveCoins(coins-v.price);
+    addOwned(id);
+    setVoiceSetting(id);
+    renderShop();
+    // 미리듣기
+    speak('안녕! 이제 이 목소리로 말할게!');
+    toast('🎉 '+v.name+' 구매 완료!');
+  });
+}
+function selectVoice(id){
+  setVoiceSetting(id);
+  renderShop();
+  speak('이 목소리로 바꿨어!');
+}
 function renderProfileBar(){
   const bar=document.getElementById('profileBar');
   if(!bar) return;
@@ -1344,6 +1461,26 @@ function addProfile(){
   document.getElementById('selectBtn').disabled=true;
 }
 
+function buyCharacter(ch){
+  const coins=loadCoins();
+  if(coins < ch.price){
+    customConfirm(ch.name+' 친구를 만나려면', '🪙 '+ch.price+'코인이 필요해요! (지금 '+coins+'개)\n양치를 더 하고 모아봐요!', ch.emoji, ()=>{});
+    return;
+  }
+  customConfirm(ch.name+' 친구를 데려올까요?', '🪙 '+ch.price+'코인을 사용해요 (지금 '+coins+'개)', ch.emoji, (yes)=>{
+    if(!yes) return;
+    saveCoins(coins - ch.price);
+    addOwned(ch.id);
+    updateCoinDisplay();
+    buildSelectScreen();
+    // 축하
+    document.getElementById('luEmoji').textContent=ch.emoji;
+    document.getElementById('luTitle').textContent='🎉 새 친구 등장!';
+    document.getElementById('luSub').textContent="'"+ch.name+"' 친구를 데려왔어요!";
+    document.getElementById('levelUpOverlay').classList.add('show');
+    for(let i=0;i<40;i++)setTimeout(confetti,i*55);
+  });
+}
 function buildSelectScreen(){
   const grid=document.getElementById('charGrid');
   grid.innerHTML='';
@@ -1352,27 +1489,29 @@ function buildSelectScreen(){
   const totalCount=getTotalCount();
 
   CHARS.forEach(ch=>{
-    const locked = ch.hidden && totalCount < ch.unlockAt;
+    // 히든 캐릭터는 구매해야 잠금 해제
+    const locked = ch.hidden && !isOwned(ch.id);
     const card=document.createElement('div');
     card.className='char-card';
 
     if(locked){
-      // 잠긴 히든 캐릭터 - 물음표 + 잠금
+      // 잠긴 히든 캐릭터 - 코인 가격 표시
+      const canAfford = loadCoins() >= ch.price;
       card.innerHTML=`<canvas width="90" height="78"></canvas>
         <div class="cname">???</div>
         <div style="position:absolute;inset:0;background:rgba(80,60,120,0.82);border-radius:17px;
           display:flex;flex-direction:column;align-items:center;justify-content:center;">
-          <div style="font-size:1.8rem;">🔒</div>
-          <div style="font-size:0.6rem;color:white;margin-top:2px;">${ch.unlockAt}회 달성</div>
-          <div style="font-size:0.55rem;color:#ffe066;margin-top:1px;">(${totalCount}/${ch.unlockAt})</div>
+          <div style="font-size:1.6rem;">${ch.emoji}</div>
+          <div style="font-size:0.72rem;color:${canAfford?'#ffe066':'#ffb3b3'};margin-top:3px;font-weight:bold;">🪙 ${ch.price}</div>
+          <div style="font-size:0.5rem;color:white;margin-top:1px;">${canAfford?'탭해서 구매!':'코인 부족'}</div>
         </div>`;
+      card.onclick=()=>buyCharacter(ch);
       grid.appendChild(card);
       return;
     }
 
     card.innerHTML=`<canvas width="90" height="78"></canvas><div class="cname">${ch.name}</div><span class="check">✅</span>`;
     if(ch.hidden){
-      // 해금된 히든 캐릭터 표시
       const badge=document.createElement('div');
       badge.style.cssText='position:absolute;top:4px;left:6px;font-size:0.7rem;';
       badge.textContent='✨';
@@ -1415,8 +1554,9 @@ function onboardNext(){
 function updateSelectGreeting(){
   const theme=getTimeTheme();
   const name=getChildName();
-  document.getElementById('selectSub').textContent=theme.label+' '+name+'아~ 같이 이 닦을 친구를 골라봐요!';
+  document.getElementById('selectSub').textContent=theme.label+' '+josaName()+'~ 같이 이 닦을 친구를 골라봐요!';
   renderProfileBar();
+  updateCoinDisplay();
 }
 
 function startWithChar(){
@@ -1641,6 +1781,8 @@ function finishTimer(){
   _inSession=false; _pendingStart=null;
   clearInterval(foamIv);animRoad(false);startRenderLoop('done');
   releaseWakeLock();
+  addCoins(5); // 양치 완료 보상 코인
+  setTimeout(()=>toast('🪙 코인 5개를 받았어요!'), 1500);
   document.getElementById('btnPause').style.display='none';
   document.getElementById('btnStart').style.display='none';
   document.getElementById('btnReset').style.display='block';
