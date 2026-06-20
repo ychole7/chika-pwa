@@ -161,7 +161,7 @@ body{font-family:'Jua',sans-serif;background:linear-gradient(160deg,#c8edff 0%,#
 .drag-handle:active{cursor:grabbing;}
 
 /* ── 캐릭터 성장 배지 ── */
-.growth-badge{position:absolute;top:4px;right:6px;background:linear-gradient(135deg,#FFD600,#FF8C00);color:white;border-radius:20px;padding:3px 8px;font-size:0.65rem;font-weight:bold;box-shadow:0 2px 8px rgba(255,140,0,0.4);z-index:6;}
+.growth-badge{position:absolute;top:2px;right:5px;background:linear-gradient(135deg,#FFD600,#FF8C00);color:white;border-radius:14px;padding:2px 7px;font-size:0.6rem;font-weight:bold;box-shadow:0 2px 6px rgba(255,140,0,0.4);z-index:6;max-width:42%;text-align:center;line-height:1.1;}
 .level-up-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.3s;}
 .level-up-overlay.show{opacity:1;pointer-events:all;}
 .level-up-card{background:white;border-radius:28px;padding:28px 24px;text-align:center;width:300px;animation:levelUpPop 0.5s cubic-bezier(.34,1.56,.64,1) forwards;}
@@ -928,14 +928,14 @@ function setVoiceSetting(vid){ localStorage.setItem('chika_voice_'+getActiveProf
 const SCRIPTS={
   start:['{name}아, 드디어 치카치카 시간이다! 같이 해볼까?','{name}아, 칫솔 들었지? 이제 신나게 닦아보자!'],
   steps:[
-    ['왼쪽 아랫니! 요기 숨어있는 밥풀, 없애버리자!','아랫니 왼쪽을 꼼꼼하게, 충치 벌레가 못 오게!'],
-    ['이번엔 반대쪽! 오른쪽 아랫니도 닦아줘야지!','오른쪽 아래도 잊으면 안 돼, 열심히 닦자!'],
-    ['위로 올라왔어! 왼쪽 윗니 차례야, 준비됐지?','왼쪽 윗니를 꼼꼼하게 닦으면, 이가 반짝반짝해져!'],
-    ['오른쪽 윗니도 닦아야 해! 거의 다 왔어!','윗니 오른쪽! 칫솔을 위아래로, 씩씩하게 움직여봐!'],
-    ['앞니 닦기! 웃을 때 제일 먼저 보이는 이잖아!','반짝반짝 앞니! 사진 찍을 때 보이는 이니까, 잘 닦자!'],
-    ['마무리 닦기! 구석구석, 한 번 더 싹!','마지막으로 전체를 쓱싹쓱싹! 깨끗하게 마무리하자!'],
-    ['혀도 닦아야 해! 살살 닦자!','혀 닦기! 앞으로 쓱쓱, 간지럽지? 그래도 해야 해!'],
-    ['마지막은 가글! 물 한 모금 물고, 부글부글 해봐!','가글 타임! 입에 물 넣고, 구석구석 헹궈봐!'],
+    ['왼쪽 아랫니를 닦아볼까? 숨어있는 밥풀, 싹 없애버리자!','왼쪽 아랫니, 꼼꼼하게! 충치 벌레가 못 오게!'],
+    ['오른쪽 아랫니도 닦아줘야지! 구석구석 깨끗하게!','오른쪽 아랫니, 열심히 닦자! 반짝반짝하게!'],
+    ['왼쪽 윗니 차례야! 위아래로 꼼꼼하게 닦아봐!','왼쪽 윗니를 닦으면 이가 반짝반짝해져!'],
+    ['오른쪽 윗니도 깨끗하게! 칫솔을 위아래로 움직여봐!','오른쪽 윗니, 씩씩하게 닦아보자!'],
+    ['앞니를 닦아볼까? 웃을 때 제일 먼저 보이는 이야!','반짝반짝 앞니! 꼼꼼하게 닦아주자!'],
+    ['구석구석 마무리로 한 번 더 싹싹! 깨끗하게!','마무리 닦기! 전체를 쓱싹쓱싹 해보자!'],
+    ['혀도 살살 닦아볼까? 앞으로 쓱쓱!','혀 닦기! 살살, 부드럽게 닦아주자!'],
+    ['마지막은 가글! 물 한 모금 물고 부글부글!','가글 타임! 입에 물 넣고 구석구석 헹궈봐!'],
   ],
   done:['{name}아, 이 닦기 완료! 이가 반짝반짝 빛나고 있어! 최고야!','{name}아, 완벽해! 충치 벌레들이 도망갔어! 오늘도 정말 잘했어!'],
   pause:['{name}아, 잠깐 쉬어가자, 준비되면 다시 눌러!'],
@@ -1790,7 +1790,8 @@ function finishTimer(){
   for(let i=0;i<STEP_COUNT;i++)setTimeout(()=>{const st=document.getElementById('st'+i);if(st)st.classList.add('lit');},i*90);
   for(let i=0;i<STEP_COUNT;i++){const p=document.getElementById('sp'+i);if(p){p.classList.remove('active');p.classList.add('done');}}
   for(let i=0;i<32;i++)setTimeout(confetti,i*55);
-  fadeOutMusic(4000);
+  // 완료 축하 멘트 끝날 즈음 음악 정지
+  setTimeout(()=>stopMusic(), 2500);
   recordToday(getTimeSlot());
   // 총 횟수 증가 + 레벨업 체크
   const prevTotal = getTotalCount();
@@ -1798,18 +1799,6 @@ function finishTimer(){
   const newTotal = prevTotal + 1;
   checkLevelUp(prevTotal);
   updateGrowthBadge();
-  // 히든 캐릭터 해금 체크
-  CHARS.forEach(ch=>{
-    if(ch.hidden && prevTotal < ch.unlockAt && newTotal >= ch.unlockAt){
-      setTimeout(()=>{
-        document.getElementById('luEmoji').textContent=ch.emoji;
-        document.getElementById('luTitle').textContent='🎉 히든 캐릭터 해금!';
-        document.getElementById('luSub').textContent=`'${ch.name}'을(를) 만났어요! 이제 같이 놀 수 있어요!`;
-        document.getElementById('levelUpOverlay').classList.add('show');
-        for(let i=0;i<40;i++)setTimeout(confetti,i*55);
-      }, 3500);
-    }
-  });
   awardSticker();
 }
 function resetTimer(){
