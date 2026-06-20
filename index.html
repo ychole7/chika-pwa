@@ -1568,9 +1568,12 @@ function releaseWakeLock(){
 
 let _inSession=false;     // 양치 세션 진행 중 플래그
 let _pendingStart=null;   // 인사말 후 시작 콜백 (취소용)
+let _inGreeting=false;    // 인사말 재생 중 플래그
+let _pausedDuringGreeting=false; // 인사말 중 일시정지 눌림
 function startTimer(){
   if(running)return;
   _inSession=true;
+  _pausedDuringGreeting=false; // 재시작 시 리셋
   if(!musicPlaying)startMusic();
   requestWakeLock();
   document.getElementById('btnStart').style.display='none';
@@ -1588,11 +1591,13 @@ function startTimer(){
     currentStep=-1;
     remaining=TOTAL;
     updateTimer();
+    _inGreeting=true;  // 인사말 단계 진입
     const greeting=rand(SCRIPTS.start);
     showBubble(greeting);
-    // 인사말 음성 재생 후 카운트 시작
     _pendingStart=()=>{
-      if(!_inSession) return; // 취소됐으면 시작 안 함
+      _inGreeting=false;
+      if(!_inSession) return;       // 세션 종료됐으면 시작 안 함
+      if(_pausedDuringGreeting){ _pausedDuringGreeting=false; return; } // 인사말 중 정지했으면 시작 안 함
       running=true; animRoad(true);
       updateStep();
       beginCountdown();
@@ -1608,8 +1613,20 @@ function beginCountdown(){
   },1000);
 }
 function pauseTimer(){
+  // 인사말 재생 중에 누르면: 인사말 취소하고 처음 상태로
+  if(_inGreeting){
+    _pausedDuringGreeting=true;
+    _inGreeting=false;
+    stopTTS();
+    speechSynthesis.cancel();
+    running=false;
+    document.getElementById('btnPause').style.display='none';
+    document.getElementById('btnStart').style.display='block';
+    document.getElementById('btnStart').textContent='▶️ 시작!';
+    showBubble('준비되면 시작 버튼을 눌러줘!');
+    return;
+  }
   clearInterval(timerIv);running=false;animRoad(false);clearInterval(foamIv);
-  // 일시정지 중에도 화면 유지 (WakeLock 안 풀기)
   stopTTS();
   startRenderLoop('idle');
   document.getElementById('btnPause').style.display='none';
