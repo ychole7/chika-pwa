@@ -294,9 +294,9 @@ body{font-family:'Jua',sans-serif;background:linear-gradient(160deg,#c8edff 0%,#
   <div id="shopModal">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
       <div style="font-size:1.2rem;color:#5533aa;">🛒 상점</div>
-      <div id="shopCoins" style="background:linear-gradient(135deg,#FFE082,#FFB300);color:#7a4f00;font-weight:bold;padding:5px 14px;border-radius:18px;font-size:0.9rem;">🪙 0</div>
+      <div id="shopCoins" style="background:linear-gradient(135deg,#FFE082,#FFB300);color:#7a4f00;font-weight:bold;padding:5px 14px;border-radius:18px;font-size:0.9rem;">💰 0</div>
     </div>
-    <div style="font-size:0.78rem;color:#999;margin-bottom:14px;">양치를 완료하면 🪙5코인을 받아요!</div>
+    <div style="font-size:0.78rem;color:#999;margin-bottom:14px;">양치를 완료하면 💰 5코인을 받아요!</div>
     <div class="dash-section" style="margin-bottom:10px;">🎤 목소리</div>
     <div id="shopVoices"></div>
     <div style="font-size:0.72rem;color:#b0a0d8;text-align:center;margin:12px 0;">✨ 친구(캐릭터)는 선택 화면에서<br>코인으로 데려올 수 있어요!</div>
@@ -346,7 +346,7 @@ body{font-family:'Jua',sans-serif;background:linear-gradient(160deg,#c8edff 0%,#
   <!-- 프로필 전환 -->
   <div id="profileBar" style="display:flex;gap:8px;align-items:center;justify-content:center;margin-bottom:10px;flex-wrap:wrap;"></div>
   <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:14px;">
-    <div id="coinDisplay" style="background:linear-gradient(135deg,#FFE082,#FFB300);color:#7a4f00;font-weight:bold;padding:6px 16px;border-radius:20px;font-size:0.9rem;box-shadow:0 2px 8px rgba(255,179,0,0.3);">🪙 0</div>
+    <div id="coinDisplay" style="background:linear-gradient(135deg,#FFE082,#FFB300);color:#7a4f00;font-weight:bold;padding:6px 16px;border-radius:20px;font-size:0.9rem;box-shadow:0 2px 8px rgba(255,179,0,0.3);">💰 0</div>
     <button onclick="openShop()" style="background:white;border:2px solid #FFB300;color:#FF8C00;padding:6px 16px;border-radius:20px;font-family:'Jua',sans-serif;font-size:0.85rem;cursor:pointer;">🛒 상점</button>
   </div>
   <div class="char-grid" id="charGrid"></div>
@@ -1347,7 +1347,7 @@ let selectedChar=null, selectedCardEl=null;
 
 function updateCoinDisplay(){
   const el=document.getElementById('coinDisplay');
-  if(el) el.textContent='🪙 '+loadCoins();
+  if(el) el.textContent='💰 '+loadCoins();
 }
 function openShop(){
   const ov=document.getElementById('shopOverlay');
@@ -1358,7 +1358,7 @@ function closeShop(){ document.getElementById('shopOverlay').classList.remove('o
 function renderShop(){
   updateCoinDisplay();
   const coins=loadCoins();
-  document.getElementById('shopCoins').textContent='🪙 '+coins;
+  document.getElementById('shopCoins').textContent='💰 '+coins;
   // 목소리 섹션
   const vArea=document.getElementById('shopVoices');
   vArea.innerHTML='';
@@ -1373,7 +1373,7 @@ function renderShop(){
     let btn;
     if(selected){ btn='<span style="color:#FF8C00;font-weight:bold;font-size:0.85rem;">✅ 사용중</span>'; }
     else if(owned){ btn='<button onclick="selectVoice(\''+v.id+'\')" style="background:#7c4dff;color:white;border:none;padding:7px 14px;border-radius:10px;font-family:Jua;font-size:0.82rem;cursor:pointer;">사용하기</button>'; }
-    else { btn='<button onclick="buyVoice(\''+v.id+'\')" style="background:linear-gradient(135deg,#FFD54F,#FFB300);color:#7a4f00;border:none;padding:7px 14px;border-radius:10px;font-family:Jua;font-size:0.82rem;cursor:pointer;">🪙 '+v.price+'</button>'; }
+    else { btn='<button onclick="buyVoice(\''+v.id+'\')" style="background:linear-gradient(135deg,#FFD54F,#FFB300);color:#7a4f00;border:none;padding:7px 14px;border-radius:10px;font-family:Jua;font-size:0.82rem;cursor:pointer;">💰 '+v.price+'</button>'; }
     row.innerHTML='<span style="font-size:1.4rem;">'+v.emoji+'</span><span style="flex:1;font-size:0.9rem;color:#3d2b8e;">'+v.name+'</span>'+btn;
     vArea.appendChild(row);
   });
@@ -1383,10 +1383,10 @@ function buyVoice(id){
   if(!v)return;
   const coins=loadCoins();
   if(coins<v.price){
-    customConfirm('코인이 부족해요', '🪙 '+v.price+'코인이 필요해요 (지금 '+coins+'개)', v.emoji, ()=>{});
+    customConfirm('코인이 더 필요해요', v.price+'코인이 필요해요 (지금 '+coins+'개)\n양치하면 5코인씩 모을 수 있어요!', v.emoji, ()=>{}, {single:true, yesLabel:'알겠어요!'});
     return;
   }
-  customConfirm(v.name+'을(를) 살까요?', '🪙 '+v.price+'코인을 사용해요', v.emoji, (yes)=>{
+  customConfirm(v.name+'을(를) 살까요?', v.price+'코인을 사용해요', v.emoji, (yes)=>{
     if(!yes)return;
     saveCoins(coins-v.price);
     addOwned(id);
@@ -1464,10 +1464,16 @@ function addProfile(){
 function buyCharacter(ch){
   const coins=loadCoins();
   if(coins < ch.price){
-    customConfirm(ch.name+' 친구를 만나려면', '🪙 '+ch.price+'코인이 필요해요! (지금 '+coins+'개)\n양치를 더 하고 모아봐요!', ch.emoji, ()=>{});
+    customConfirm(
+      ch.name+' 친구를 만나려면 코인이 더 필요해요',
+      ch.price+'코인이 필요해요 (지금 '+coins+'개)\n양치하면 5코인씩 모을 수 있어요!',
+      ch.emoji,
+      (yes)=>{ /* 양치하러 가기는 그냥 팝업 닫힘 */ },
+      {single:true, yesLabel:'알겠어요!'}
+    );
     return;
   }
-  customConfirm(ch.name+' 친구를 데려올까요?', '🪙 '+ch.price+'코인을 사용해요 (지금 '+coins+'개)', ch.emoji, (yes)=>{
+  customConfirm(ch.name+' 친구를 데려올까요?', ch.price+'코인을 사용해요 (지금 '+coins+'개)', ch.emoji, (yes)=>{
     if(!yes) return;
     saveCoins(coins - ch.price);
     addOwned(ch.id);
@@ -1502,7 +1508,7 @@ function buildSelectScreen(){
         <div style="position:absolute;inset:0;background:rgba(80,60,120,0.82);border-radius:17px;
           display:flex;flex-direction:column;align-items:center;justify-content:center;">
           <div style="font-size:1.6rem;">${ch.emoji}</div>
-          <div style="font-size:0.72rem;color:${canAfford?'#ffe066':'#ffb3b3'};margin-top:3px;font-weight:bold;">🪙 ${ch.price}</div>
+          <div style="font-size:0.72rem;color:${canAfford?'#ffe066':'#ffb3b3'};margin-top:3px;font-weight:bold;">💰 ${ch.price}</div>
           <div style="font-size:0.5rem;color:white;margin-top:1px;">${canAfford?'탭해서 구매!':'코인 부족'}</div>
         </div>`;
       card.onclick=()=>buyCharacter(ch);
@@ -1782,7 +1788,7 @@ function finishTimer(){
   clearInterval(foamIv);animRoad(false);startRenderLoop('done');
   releaseWakeLock();
   addCoins(5); // 양치 완료 보상 코인
-  setTimeout(()=>toast('🪙 코인 5개를 받았어요!'), 1500);
+  setTimeout(()=>toast('💰 코인 5개를 받았어요!'), 1500);
   document.getElementById('btnPause').style.display='none';
   document.getElementById('btnStart').style.display='none';
   document.getElementById('btnReset').style.display='block';
@@ -1925,11 +1931,19 @@ let dashUnlocked=false;
 let _pinBuffer='', _pinCallback=null;
 let _pinMode='verify', _pinFirstEntry='';
 let _confirmCallback=null;
-function customConfirm(msg, sub, emoji, cb){
+function customConfirm(msg, sub, emoji, cb, opts){
+  opts = opts || {};
   document.getElementById('confirmMsg').textContent=msg;
   document.getElementById('confirmSub').textContent=sub||'';
   document.getElementById('confirmEmoji').textContent=emoji||'🤔';
   _confirmCallback=cb;
+  const noBtn=document.querySelector('#confirmModal .confirm-no');
+  const yesBtn=document.querySelector('#confirmModal .confirm-yes');
+  // 버튼 라벨 커스텀
+  yesBtn.textContent = opts.yesLabel || '네';
+  noBtn.textContent = opts.noLabel || '아니요';
+  // 단일 버튼 모드 (확인만)
+  noBtn.style.display = opts.single ? 'none' : '';
   document.getElementById('confirmOverlay').classList.add('open');
 }
 function confirmAnswer(yes){
