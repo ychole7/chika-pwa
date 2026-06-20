@@ -942,19 +942,9 @@ const SCRIPTS={
 };
 function rand(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 
-// Claude API 멘트 캐시
+// 멘트 캐시 (현재 미사용 - 기본 SCRIPTS 사용)
 const scriptCache={};
-async function prefetchScript(idx, charName){
-  const key=`${charName}_${idx}`;
-  if(scriptCache[key])return;
-  const stepNames=['왼쪽 아랫니','오른쪽 아랫니','왼쪽 윗니','오른쪽 윗니','앞니','마무리','혀','가글'];
-  try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:100,system:'아이 양치질 도우미. 짧고 재미있게.',messages:[{role:'user',content:`${charName} 캐릭터로 6세 아이에게 "${stepNames[idx]}" 닦기 응원. 1-2문장, 반말, 이모지 1개.`}]})});
-    const data=await res.json();
-    const txt=data.content?.[0]?.text?.trim();
-    if(txt)scriptCache[key]=txt;
-  }catch(e){}
-}
+function prefetchScript(idx, charName){ /* 외부 API 미사용 */ }
 function getScript(stepIdx,charName){
   const key=`${charName}_${stepIdx}`;
   const cached = scriptCache[key];
@@ -1704,12 +1694,12 @@ async function requestWakeLock(){
   try{
     if('wakeLock' in navigator){
       _wakeLock=await navigator.wakeLock.request('screen');
-      console.log('[WakeLock] 화면 켜짐 유지');
+      
     }
-  }catch(e){ console.log('[WakeLock] 지원 안됨:', e.message); }
+  }catch(e){ }
 }
 function releaseWakeLock(){
-  if(_wakeLock){_wakeLock.release();_wakeLock=null;console.log('[WakeLock] 해제');}
+  if(_wakeLock){_wakeLock.release();_wakeLock=null;}
 }
 
 let _inSession=false;     // 양치 세션 진행 중 플래그
