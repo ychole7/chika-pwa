@@ -937,7 +937,7 @@ const SCRIPTS={
     ['혀도 살살 닦아볼까? 앞으로 쓱쓱!','혀 닦기! 살살, 부드럽게 닦아주자!'],
     ['마지막은 가글! 물 한 모금 물고 부글부글!','가글 타임! 입에 물 넣고 구석구석 헹궈봐!'],
   ],
-  done:['{name}아, 이 닦기 완료! 이가 반짝반짝 빛나고 있어! 최고야!','{name}아, 완벽해! 충치 벌레들이 도망갔어! 오늘도 정말 잘했어!'],
+  done:['{name}아, 이 닦기 완료! 이가 반짝반짝 빛나!','{name}아, 완벽해! 충치 벌레들이 다 도망갔어!'],
   pause:['{name}아, 잠깐 쉬어가자, 준비되면 다시 눌러!'],
 };
 function rand(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
@@ -2467,19 +2467,9 @@ function wrapDrawWithAccessory(charId, origFn){
 
 // 성장 정보를 씬에 표시
 function updateGrowthBadge(){
-  let badge = document.getElementById('growthBadge');
-  if(!badge){
-    badge = document.createElement('div');
-    badge.id = 'growthBadge';
-    badge.className = 'growth-badge';
-    const scene = document.getElementById('scene');
-    if(scene) scene.appendChild(badge);
-  }
-  const lv = getCurrentLevel();
-  const next = getNextLevel();
-  const total = getTotalCount();
-  badge.textContent = `Lv.${lv.lv} ${lv.emoji} ${lv.name}`;
-  badge.title = next ? `다음 레벨까지 ${next.need-total}회` : '최고 레벨!';
+  // 양치 화면에서는 레벨 배지를 표시하지 않음 (캐릭터에 집중)
+  const badge = document.getElementById('growthBadge');
+  if(badge) badge.style.display = 'none';
 }
 
 // ════════════════════════════════════════
