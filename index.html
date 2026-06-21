@@ -2390,10 +2390,11 @@ function closeLevelUp(){
 
 // 캐릭터 위에 액세서리 그리기
 function drawAccessory(c, accessory, W, H, t, mini){
+  return; // 캐릭터 머리 위 액세서리 표시 안 함 (레벨은 우측 배지로)
   if(!accessory || accessory==='none') return;
   c.save();
   const cx = W/2;
-  const headY = mini ? 15 : 38; // 별/왕관을 머리에 더 가깝게 (말풍선 겹침 방지)
+  const headY = mini ? 15 : 22; // 캐릭터 머리 위 위치
 
   switch(accessory){
     case 'ribbon':
@@ -2467,9 +2468,20 @@ function wrapDrawWithAccessory(charId, origFn){
 
 // 성장 정보를 씬에 표시
 function updateGrowthBadge(){
-  // 양치 화면에서는 레벨 배지를 표시하지 않음 (캐릭터에 집중)
-  const badge = document.getElementById('growthBadge');
-  if(badge) badge.style.display = 'none';
+  let badge = document.getElementById('growthBadge');
+  if(!badge){
+    badge = document.createElement('div');
+    badge.id = 'growthBadge';
+    badge.className = 'growth-badge';
+    const scene = document.getElementById('scene');
+    if(scene) scene.appendChild(badge);
+  }
+  badge.style.display = '';
+  const lv = getCurrentLevel();
+  const next = getNextLevel();
+  const total = getTotalCount();
+  badge.textContent = `Lv.${lv.lv} ${lv.emoji} ${lv.name}`;
+  badge.title = next ? `다음 레벨까지 ${next.need-total}회` : '최고 레벨!';
 }
 
 // ════════════════════════════════════════
