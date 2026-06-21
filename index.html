@@ -1023,8 +1023,8 @@ function drawTayo(c,t,mode,step,mini){
   const bounce=mode==='idle'?Math.sin(t*2)*2:mode==='done'?Math.sin(t*6)*5:Math.sin(t*8)*1.5;
   c.save();
   // 버스를 70% 크기로 줄이고 아래쪽으로 배치 (말풍선 안 가리게)
-  const scale=mini?1:0.72;
-  c.translate(W/2,H*0.5+(mini?0:18)+bounce);
+  const scale=mini?1:0.62;
+  c.translate(W/2,H*0.5+(mini?0:30)+bounce);
   c.scale(scale,scale);
   c.translate(-W/2,-H*0.5);
   rr(c,15,28,W-30,H-55,22,'#1A9ADB');rr(c,22,16,W-34,20,10,'#0D6FA3');
