@@ -383,9 +383,9 @@ body{font-family:'Jua',sans-serif;background:linear-gradient(160deg,#c8edff 0%,#
   <h1 class="ob-title">치카치카 친구들!</h1>
   <p class="ob-sub">매일 이를 닦고<br>건강한 이를 만들어봐요 ✨</p>
   <p class="ob-label">👶 아이 별명이 뭐예요?</p>
-  <input class="ob-input" id="nameInput" type="text" placeholder="별명을 정해줘요" maxlength="6"
-    oninput="document.getElementById('obBtn').disabled=!this.value.trim()"
-    onkeydown="if(event.key==='Enter'&&this.value.trim())onboardNext()"/>
+  <input class="ob-input" id="obNameInput" type="text" placeholder="별명을 정해줘요" maxlength="6"
+  oninput="document.getElementById('obBtn').disabled=!this.value.trim()"
+  onkeydown="if(event.key==='Enter'&&this.value.trim())onboardNext()"/>
   <button class="ob-btn" id="obBtn" disabled onclick="onboardNext()">🚀 시작하기!</button>
   <p class="ob-hint">이름은 나중에 바꿀 수 있어요</p>
 </div>
@@ -1728,7 +1728,7 @@ function buildSelectScreen(){
 }
 
 function onboardNext(){
-  const val=document.getElementById('nameInput').value.trim();
+  const val=document.getElementById('obNameInput').value.trim();
   if(!val)return;
   // 첫 번째 프로필 생성
   const profiles=loadProfiles();
