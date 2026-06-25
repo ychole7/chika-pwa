@@ -1037,22 +1037,72 @@ function drawTayo(c,t,mode,step,mini){
   const W=mini?145:240,H=mini?130:185;if(!mini)c.clearRect(0,0,W,H);
   const bounce=mode==='idle'?Math.sin(t*2)*2:mode==='done'?Math.sin(t*6)*5:Math.sin(t*8)*1.5;
   c.save();
-  // 버스를 70% 크기로 줄이고 아래쪽으로 배치 (말풍선 안 가리게)
-  const scale=mini?1:0.62;
-  c.translate(W/2,H*0.5+(mini?0:30)+bounce);
+  const scale=mini?1:0.66;
+  c.translate(W/2,H*0.5+(mini?0:26)+bounce);
   c.scale(scale,scale);
   c.translate(-W/2,-H*0.5);
-  rr(c,15,28,W-30,H-55,22,'#1A9ADB');rr(c,22,16,W-34,20,10,'#0D6FA3');
-  c.fillStyle='#FFE066';c.font=`bold ${mini?7:9}px Jua,sans-serif`;c.textAlign='center';c.fillText('버스',W/2,mini?27:28);
-  rr(c,W*0.42,36,W*0.22,H*0.18,7,'#B8E8FF',0.9);rr(c,W*0.67,36,W*0.19,H*0.18,7,'#B8E8FF',0.9);
-  rr(c,22,36,W*0.29,H*0.27,10,'#B8E8FF',0.85);
+
+  // 바닥 그림자
+  c.save();c.globalAlpha=0.12;c.fillStyle='#000';c.beginPath();c.ellipse(W/2,H-12,W*0.36,9,0,0,Math.PI*2);c.fill();c.restore();
+
+  const bx=18, bw=W-36, by=26, bh=H-56;
+
+  // 차체 하단 (노랑) - 살짝 둥근 사다리꼴 느낌
+  rr(c,bx,by,bw,bh,28,'#FFC94D');
+  // 차체 상단 (민트) - 위쪽 절반
+  c.save();c.beginPath();c.roundRect(bx,by,bw,bh,28);c.clip();
+  rr(c,bx-2,by-2,bw+4,bh*0.52,28,'#9FE0C8');
+  // 민트/노랑 경계 부드러운 라인
+  c.fillStyle='#7FCBAE';c.fillRect(bx,by+bh*0.50,bw,2);
+  c.restore();
+
+  // 차체 외곽 라인(부드러운 테두리)
+  c.strokeStyle='rgba(80,130,110,0.25)';c.lineWidth=2;c.beginPath();c.roundRect(bx,by,bw,bh,28);c.stroke();
+
+  // 지붕 하이라이트 (광택)
+  c.save();c.globalAlpha=0.35;c.fillStyle='#fff';c.beginPath();c.ellipse(W*0.42,by+10,bw*0.28,7,0,0,Math.PI*2);c.fill();c.restore();
+
+  // 안테나 + 솔라패널 (지붕 위)
+  c.strokeStyle='#9aa3ad';c.lineWidth=2.4;c.lineCap='round';
+  c.beginPath();c.moveTo(W*0.30,by);c.lineTo(W*0.27,by-18);c.stroke();
+  circ(c,W*0.27,by-20,3.2,'#FF7070');
+  // 솔라패널 (입체감)
+  c.save();c.translate(W*0.40,by-9);
+  rr(c,0,0,W*0.26,11,3,'#2e4a78');
+  c.strokeStyle='#5a7ab0';c.lineWidth=0.8;
+  for(let k=1;k<5;k++){c.beginPath();c.moveTo(W*0.052*k,1);c.lineTo(W*0.052*k,10);c.stroke();}
+  c.strokeStyle='#1d3050';c.lineWidth=0.8;c.beginPath();c.moveTo(0,5.5);c.lineTo(W*0.26,5.5);c.stroke();
+  c.restore();
+
+  // 옆 창문 (둥근 사각, 안쪽 그림자)
+  rr(c,W*0.55,by+bh*0.16,W*0.16,bh*0.30,8,'#cdeeff',0.95);
+  rr(c,W*0.73,by+bh*0.16,W*0.13,bh*0.30,8,'#cdeeff',0.95);
+  // 창문 하이라이트
+  c.save();c.globalAlpha=0.5;c.fillStyle='#fff';
+  c.beginPath();c.moveTo(W*0.56,by+bh*0.18);c.lineTo(W*0.61,by+bh*0.18);c.lineTo(W*0.57,by+bh*0.42);c.lineTo(W*0.555,by+bh*0.42);c.closePath();c.fill();c.restore();
+
+  // 얼굴 패널 (앞유리, 밝은 화이트민트)
+  rr(c,bx+6,by+bh*0.14,W*0.30,bh*0.46,14,'#F2FBF6',0.97);
+  rr(c,bx+6,by+bh*0.14,W*0.30,bh*0.46,14,'rgba(150,200,180,0.0)');
+  c.strokeStyle='rgba(120,170,150,0.3)';c.lineWidth=1.5;c.beginPath();c.roundRect(bx+6,by+bh*0.14,W*0.30,bh*0.46,14);c.stroke();
+
+  // 얼굴
   const or=getOpenR(t,mode);
-  const mx=22+W*0.145,my=36+H*0.165;
-  drawMouth(c,mx,my,W*0.2,H*0.11,or,t,mode,step);
-  drawEyes(c,mx,my-H*0.09,mode,step,t,W*0.085,W*0.038,H*0.052,'#1A3A5C');
-  circ(c,18,my+H*0.04,6,'rgba(255,155,176,0.55)');circ(c,22+W*0.27,my+H*0.04,6,'rgba(255,155,176,0.55)');
-  rr(c,W*0.48,H*0.44,W*0.11,H*0.34,5,'#0D6FA3');
-  drawWheel(c,W*0.2,H-22,mini?14:18,t,mode);drawWheel(c,W*0.75,H-22,mini?14:18,t,mode);
+  const mx=bx+6+W*0.15, my=by+bh*0.14+bh*0.26;
+  drawMouth(c,mx,my,W*0.19,bh*0.11,or,t,mode,step);
+  drawEyes(c,mx,my-bh*0.155,mode,step,t,W*0.082,W*0.037,bh*0.075,'#27496b');
+  // 볼터치
+  circ(c,bx+10,my+2,5.5,'rgba(255,150,130,0.45)');
+  circ(c,bx+6+W*0.27,my+2,5.5,'rgba(255,150,130,0.45)');
+
+  // 노랑 범퍼 + 헤드라이트
+  rr(c,bx+2,H-30,bw+0,13,7,'#F5B82E');
+  circ(c,W*0.27,H-24,4.5,'#FFF6D0');circ(c,W*0.27,H-24,2.2,'#FFE08A');
+  circ(c,W*0.73,H-24,4.5,'#FFF6D0');circ(c,W*0.73,H-24,2.2,'#FFE08A');
+
+  // 바퀴
+  drawWheel(c,W*0.26,H-18,mini?13:16,t,mode);
+  drawWheel(c,W*0.72,H-18,mini?13:16,t,mode);
   c.restore();
 }
 function drawPinkfong(c,t,mode,step,mini){
@@ -1111,19 +1161,70 @@ function drawTinping(c,t,mode,step,mini){
 function drawPororo(c,t,mode,step,mini){
   const W=mini?145:240,H=mini?130:185;if(!mini)c.clearRect(0,0,W,H);
   const bounce=mode==='idle'?Math.sin(t*2)*2.5:mode==='done'?Math.sin(t*6)*6:Math.sin(t*7)*2;
-  c.save();c.translate(W/2,mini?65:H*0.67+bounce);
-  circ(c,0,20,36,'#2a2a2a');circ(c,0,24,26,'white');
-  c.fillStyle='#2a2a2a';
-  c.save();c.translate(-36,10);c.rotate(Math.sin(t*5)*0.3);c.beginPath();c.ellipse(0,0,7,20,-0.3,0,Math.PI*2);c.fill();c.restore();
-  c.save();c.translate(36,10);c.rotate(-Math.sin(t*5)*0.3);c.beginPath();c.ellipse(0,0,7,20,0.3,0,Math.PI*2);c.fill();c.restore();
-  c.fillStyle='#FF8F00';c.beginPath();c.ellipse(-13,50,9,5,-0.2,0,Math.PI*2);c.fill();c.beginPath();c.ellipse(13,50,9,5,0.2,0,Math.PI*2);c.fill();
-  circ(c,0,-22,34,'#2a2a2a');
-  c.fillStyle='#0288D1';c.beginPath();c.arc(0,-22,34,Math.PI+0.3,-0.3);c.closePath();c.fill();
-  rr(c,-20,-14,40,13,7,'#FFEB3B',0.9);circ(c,0,-18,22,'white');
+  c.save();c.translate(W/2,(mini?68:H*0.66)+bounce);
+
+  // 바닥 그림자
+  c.save();c.globalAlpha=0.12;c.fillStyle='#000';c.beginPath();c.ellipse(0,58,34,8,0,0,Math.PI*2);c.fill();c.restore();
+
+  // 몸통 (통통한 아기펭귄) - 회색 등 + 흰 배
+  c.fillStyle='#5b6470';c.beginPath();c.ellipse(0,22,37,40,0,0,Math.PI*2);c.fill();
+  // 등쪽 진한 회색 음영
+  c.save();c.globalAlpha=0.4;c.fillStyle='#454d57';c.beginPath();c.ellipse(0,18,37,38,0,Math.PI*0.85,Math.PI*2.15);c.fill();c.restore();
+  // 흰 배 (둥글게)
+  c.fillStyle='#fbfcfe';c.beginPath();c.ellipse(0,28,27,32,0,0,Math.PI*2);c.fill();
+  // 배 안쪽 부드러운 음영
+  c.save();c.globalAlpha=0.25;c.fillStyle='#dfe6ee';c.beginPath();c.ellipse(7,32,16,22,0.2,0,Math.PI*2);c.fill();c.restore();
+
+  // 날개 (펄럭)
+  c.fillStyle='#525b66';
+  c.save();c.translate(-34,16);c.rotate(Math.sin(t*5)*0.3);c.beginPath();c.ellipse(0,0,8,21,-0.25,0,Math.PI*2);c.fill();c.restore();
+  c.save();c.translate(34,16);c.rotate(-Math.sin(t*5)*0.3);c.beginPath();c.ellipse(0,0,8,21,0.25,0,Math.PI*2);c.fill();c.restore();
+
+  // 주황 발 (입체)
+  c.fillStyle='#FF9F40';
+  c.beginPath();c.ellipse(-12,56,10,5.5,-0.15,0,Math.PI*2);c.fill();
+  c.beginPath();c.ellipse(12,56,10,5.5,0.15,0,Math.PI*2);c.fill();
+  c.save();c.globalAlpha=0.3;c.fillStyle='#E07820';
+  c.beginPath();c.ellipse(-12,58,10,3,-0.15,0,Math.PI*2);c.fill();
+  c.beginPath();c.ellipse(12,58,10,3,0.15,0,Math.PI*2);c.fill();c.restore();
+
+  // 머리 (둥근, 흰 얼굴 + 회색 후드)
+  circ(c,0,-20,33,'#5b6470');             // 회색 머리
+  // 흰 얼굴 영역
+  c.fillStyle='#fbfcfe';c.beginPath();c.ellipse(0,-14,26,27,0,0,Math.PI*2);c.fill();
+
+  // ── 갈색 니트모자 (HOI 시그니처) ──
+  // 모자 본체 (둥근 돔)
+  c.fillStyle='#A9783F';c.beginPath();c.arc(0,-26,28,Math.PI+0.12,-0.12);c.closePath();c.fill();
+  // 니트 짜임 무늬 (세로 골)
+  c.strokeStyle='#946834';c.lineWidth=1.6;
+  for(let k=-3;k<=3;k++){c.save();c.beginPath();c.moveTo(k*8,-50);c.lineTo(k*8.5,-30);c.stroke();c.restore();}
+  // 모자 접단 (도톰한 밴드)
+  rr(c,-29,-33,58,12,6,'#8B5E2F');
+  c.strokeStyle='#7a4f26';c.lineWidth=1;
+  for(let k=-26;k<28;k+=5){c.beginPath();c.moveTo(k,-32);c.lineTo(k+2,-22);c.stroke();}
+  // 모자 위 방울 (퐁퐁)
+  circ(c,0,-54,7,'#C99A5B');circ(c,-2,-56,3,'#E0BC85');
+
+  // 깃털 장식 (옆에 꽂힌)
+  c.save();c.translate(22,-46);c.rotate(0.45);
+  c.fillStyle='#D9B57A';c.beginPath();c.ellipse(0,0,3.5,13,0,0,Math.PI*2);c.fill();
+  c.strokeStyle='#B8924E';c.lineWidth=0.9;c.beginPath();c.moveTo(0,-11);c.lineTo(0,11);c.stroke();
+  // 깃털 결
+  for(let k=-8;k<10;k+=3){c.beginPath();c.moveTo(0,k);c.lineTo(2.5,k-2);c.stroke();c.beginPath();c.moveTo(0,k);c.lineTo(-2.5,k-2);c.stroke();}
+  c.restore();
+
+  // 얼굴 디테일
   const or=getOpenR(t,mode);
-  drawMouth(c,0,-10,24,13,or,t,mode,step);
-  drawEyes(c,0,-22,mode,step,t,11,5.5,6.5,'#2a2a2a');
-  c.fillStyle='#FF8F00';c.beginPath();c.ellipse(0,-8,6,3.5,0,0,Math.PI*2);c.fill();
+  drawMouth(c,0,-6,22,12,or,t,mode,step);
+  drawEyes(c,0,-18,mode,step,t,10.5,5.2,6.2,'#2a2a2a');
+  // 주황 부리
+  c.fillStyle='#FF9F40';c.beginPath();c.ellipse(0,-4,6.5,4,0,0,Math.PI*2);c.fill();
+  c.save();c.globalAlpha=0.3;c.fillStyle='#E07820';c.beginPath();c.ellipse(0,-2.5,6.5,2,0,0,Math.PI*2);c.fill();c.restore();
+  // 볼터치 (홍조)
+  circ(c,-15,-6,5.5,'rgba(255,150,130,0.42)');
+  circ(c,15,-6,5.5,'rgba(255,150,130,0.42)');
+
   c.restore();
 }
 function drawLarva(c,t,mode,step,mini){
@@ -2128,9 +2229,6 @@ function renderDashboard(){
     <div class="dash-pane" id="dashPane2">
       <div class="dash-section">🌟 캐릭터 성장 현황</div>
       <div id="growthArea" style="margin-bottom:16px;"></div>
-
-      <div class="dash-section">🧪 테스트 (출시 전 삭제)</div>
-      <button onclick="addCoins(100);updateCoinDisplay();renderShop&&renderShop();toast('⭐ 별 100개 충전!');" class="dash-btn" style="background:#fff8e0;color:#FF8C00;">⭐ 별 100개 충전 (테스트)</button>
 
       <div class="dash-section">⚙️ 관리</div>
       <button onclick="changeName()" class="dash-btn">✏️ 별명 변경 (${name})</button>
