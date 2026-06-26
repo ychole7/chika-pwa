@@ -1329,8 +1329,8 @@ function drawChikamon(c,t,mode,step,mini){
   const W=mini?145:240,H=mini?130:185;if(!mini)c.clearRect(0,0,W,H);
   const bounce=mode==='idle'?Math.sin(t*2.2)*3:mode==='done'?Math.sin(t*6)*7:Math.sin(t*7)*2.5;
   c.save();
-  const scale=mini?1:0.92;
-  c.translate(W/2,H*0.52+bounce);
+  const scale=mini?1:0.86;
+  c.translate(W/2,H*0.66+bounce);
   c.scale(scale,scale);
 
   // 몸통 (보라색 털뭉치)
