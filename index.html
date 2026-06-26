@@ -30,6 +30,10 @@ body{font-family:'Jua',sans-serif;background:linear-gradient(160deg,#c8edff 0%,#
 .ob-step-ico{flex-shrink:0;width:46px;height:46px;border-radius:13px;background:white;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 2px 8px rgba(124,77,255,0.1);}
 .ob-step-tx{font-size:0.88rem;color:#5a4a8a;line-height:1.45;}
 .ob-step-tx b{color:#5533aa;}
+.ob-pin-notice{background:#fff8e0;border:2px solid #FFD86B;border-radius:14px;padding:14px 16px;
+  margin:16px 0 4px;font-size:0.86rem;color:#7a5a00;line-height:1.5;text-align:center;}
+.ob-pin-notice b{color:#FF8C00;font-size:1.1rem;}
+.ob-pin-notice span{font-size:0.78rem;color:#a08850;}
 .ob-input:focus{border-color:#7c4dff;}
 .ob-input::placeholder{color:#c8b8f0;font-size:1.1rem;}
 .ob-btn{width:100%;padding:16px;border:none;border-radius:20px;font-family:'Jua',sans-serif;font-size:1.2rem;cursor:pointer;color:white;margin-top:16px;background:linear-gradient(135deg,#b39ddb,#7c4dff);box-shadow:0 6px 20px rgba(124,77,255,0.3);transition:transform 0.13s,opacity 0.2s;}
@@ -196,6 +200,7 @@ body{font-family:'Jua',sans-serif;background:linear-gradient(160deg,#c8edff 0%,#
 #pinOverlay.open #pinModal{transform:scale(1);}
 .pin-title{font-size:1.2rem;color:#3d2b8e;margin-bottom:4px;}
 .pin-sub{font-size:0.78rem;color:#aaa;margin-bottom:16px;}
+.pin-hint{font-size:0.78rem;color:#FF8C00;background:#fff8e0;border-radius:10px;padding:6px 12px;margin:8px auto 0;display:inline-block;}
 .pin-dots{display:flex;justify-content:center;gap:12px;margin-bottom:20px;}
 .pin-dot{width:14px;height:14px;border-radius:50%;background:#e0d8ff;transition:background 0.2s;}
 .pin-dot.filled{background:#7c4dff;}
@@ -257,6 +262,7 @@ body{font-family:'Jua',sans-serif;background:linear-gradient(160deg,#c8edff 0%,#
   <div id="pinModal">
     <div class="pin-title">🔐 부모님 확인</div>
     <div class="pin-sub">4자리 비밀번호를 입력해주세요</div>
+    <div class="pin-hint" id="pinHint" style="display:none;">💡 초기 비밀번호: 1234</div>
     <div class="pin-dots">
       <div class="pin-dot" id="pd0"></div>
       <div class="pin-dot" id="pd1"></div>
@@ -418,6 +424,10 @@ body{font-family:'Jua',sans-serif;background:linear-gradient(160deg,#c8edff 0%,#
       <div class="ob-step-item"><div class="ob-step-ico">📊</div><div class="ob-step-tx"><b>부모님 대시보드</b><br>양치 기록·설정은 여기서 관리해요</div></div>
       <div class="ob-step-item"><div class="ob-step-ico">🔐</div><div class="ob-step-tx"><b>비밀번호 보호</b><br>아이가 함부로 못 바꾸게 PIN으로 잠겨요</div></div>
       <div class="ob-step-item"><div class="ob-step-ico">⭐</div><div class="ob-step-tx"><b>별을 모아요</b><br>양치할수록 새 친구를 만날 수 있어요</div></div>
+    </div>
+    <div class="ob-pin-notice">
+      🔑 부모님 대시보드 초기 비밀번호는 <b>1234</b> 예요<br>
+      <span>들어가신 후 꼭 변경해 주세요!</span>
     </div>
     <button class="ob-btn" onclick="onboardFinish()">🚀 시작하기!</button>
   </div>
@@ -2234,6 +2244,12 @@ function processPinComplete(){
 function openPinModal(cb){
   _pinBuffer='';_pinCallback=cb;_pinMode='verify';updatePinDots();
   setPinTitle('🔐 부모님 확인','4자리 비밀번호를 입력해주세요');
+  // 비밀번호를 아직 안 바꿨으면(기본 1234) 힌트 표시
+  const hint=document.getElementById('pinHint');
+  if(hint){
+    const savedPin=localStorage.getItem('chika_pin');
+    hint.style.display = (!savedPin || savedPin==='1234') ? 'inline-block' : 'none';
+  }
   document.getElementById('pinOverlay').classList.add('open');
   if(_audioCtx&&_audioCtx.state==='suspended') _audioCtx.resume();
 }
