@@ -190,6 +190,10 @@ body{font-family:'Jua',sans-serif;background:linear-gradient(160deg,#c8edff 0%,#
 .notif-toggle input:checked+.notif-slider{background:#7c4dff;}
 .notif-toggle input:checked+.notif-slider:before{transform:translateX(20px);}
 .time-input{border:1.5px solid #d0c8f0;border-radius:8px;padding:4px 8px;font-family:'Jua',sans-serif;font-size:0.88rem;color:#3d2b8e;outline:none;}
+.notif-notice{background:#fff8e0;border:1.5px solid #FFE08A;border-radius:12px;padding:12px 14px;
+  margin-top:12px;font-size:0.82rem;color:#8a6d00;line-height:1.5;}
+.notif-notice b{color:#c77800;}
+.notif-notice span{font-size:0.76rem;color:#a8915a;}
 
 /* ── PIN 입력 모달 ── */
 #pinOverlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:400;
@@ -2788,6 +2792,10 @@ function renderNotifSettings(){
       <input type="time" id="notifEveTime" value="${s.eveningTime}" class="time-input">
     </div>
     <button onclick="saveNotifSettings2()" class="dash-btn" style="background:#7c4dff;color:white;">🔔 알림 설정 저장</button>
+    <div class="notif-notice">
+      💡 <b>알림은 앱이 켜져 있을 때만 작동해요.</b><br>
+      <span>앱을 완전히 닫으면 알림이 오지 않아요. 더 확실한 알림은 휴대폰 시계 알람을 함께 사용해 주세요!</span>
+    </div>
   `;
 }
 
@@ -2802,7 +2810,7 @@ async function saveNotifSettings2(){
   };
   saveNotifSettings(s);
   scheduleNotifications(s);
-  toast('알림 설정이 저장됐어요! ✅\n설정한 시간에 알림이 와요.');
+  toast('알림 설정이 저장됐어요! ✅\n앱이 켜져 있을 때 알려드려요.');
 }
 
 // 알림 체크 루프 (앱이 열려있을 때 - 백업용)
