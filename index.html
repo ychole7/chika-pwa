@@ -25,6 +25,11 @@ body{font-family:'Jua',sans-serif;background:linear-gradient(160deg,#c8edff 0%,#
 .ob-sub{font-size:0.9rem;color:#a090cc;margin-bottom:28px;line-height:1.5;}
 .ob-label{font-size:1rem;color:#5533aa;margin-bottom:10px;text-align:left;}
 .ob-input{width:100%;padding:16px 18px;border:2.5px solid #d0c0f8;border-radius:18px;font-family:'Jua',sans-serif;font-size:1.3rem;color:#3d2b8e;outline:none;transition:border-color 0.2s;text-align:center;}
+.ob-steps{display:flex;flex-direction:column;gap:12px;margin:24px 0 8px;text-align:left;}
+.ob-step-item{display:flex;align-items:center;gap:14px;background:#f7f4ff;border-radius:16px;padding:14px 16px;}
+.ob-step-ico{flex-shrink:0;width:46px;height:46px;border-radius:13px;background:white;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 2px 8px rgba(124,77,255,0.1);}
+.ob-step-tx{font-size:0.88rem;color:#5a4a8a;line-height:1.45;}
+.ob-step-tx b{color:#5533aa;}
 .ob-input:focus{border-color:#7c4dff;}
 .ob-input::placeholder{color:#c8b8f0;font-size:1.1rem;}
 .ob-btn{width:100%;padding:16px;border:none;border-radius:20px;font-family:'Jua',sans-serif;font-size:1.2rem;cursor:pointer;color:white;margin-top:16px;background:linear-gradient(135deg,#b39ddb,#7c4dff);box-shadow:0 6px 20px rgba(124,77,255,0.3);transition:transform 0.13s,opacity 0.2s;}
@@ -379,15 +384,43 @@ body{font-family:'Jua',sans-serif;background:linear-gradient(160deg,#c8edff 0%,#
 
 <!-- 온보딩 -->
 <div id="onboardScreen">
-  <div class="ob-emoji">🦷</div>
-  <h1 class="ob-title">치카치카 친구들!</h1>
-  <p class="ob-sub">매일 이를 닦고<br>건강한 이를 만들어봐요 ✨</p>
-  <p class="ob-label">👶 아이 별명이 뭐예요?</p>
-  <input class="ob-input" id="obNameInput" type="text" placeholder="별명을 정해줘요" maxlength="6"
-  oninput="document.getElementById('obBtn').disabled=!this.value.trim()"
-  onkeydown="if(event.key==='Enter'&&this.value.trim())onboardNext()"/>
-  <button class="ob-btn" id="obBtn" disabled onclick="onboardNext()">🚀 시작하기!</button>
-  <p class="ob-hint">이름은 나중에 바꿀 수 있어요</p>
+  <!-- Step 1: 별명 입력 -->
+  <div id="obStep1">
+    <div class="ob-emoji">🦷</div>
+    <h1 class="ob-title">치카치카 친구들!</h1>
+    <p class="ob-sub">매일 이를 닦고<br>건강한 이를 만들어봐요 ✨</p>
+    <p class="ob-label">👶 아이 별명이 뭐예요?</p>
+    <input class="ob-input" id="obNameInput" type="text" placeholder="별명을 정해줘요" maxlength="6"
+    oninput="document.getElementById('obBtn').disabled=!this.value.trim()"
+    onkeydown="if(event.key==='Enter'&&this.value.trim())onboardNext()"/>
+    <button class="ob-btn" id="obBtn" disabled onclick="onboardNext()">다음 →</button>
+    <p class="ob-hint">별명은 나중에 바꿀 수 있어요</p>
+  </div>
+
+  <!-- Step 2: 사용법 -->
+  <div id="obStep2" style="display:none;">
+    <div class="ob-emoji">✨</div>
+    <h1 class="ob-title">이렇게 사용해요</h1>
+    <div class="ob-steps">
+      <div class="ob-step-item"><div class="ob-step-ico">🎭</div><div class="ob-step-tx"><b>1. 친구 고르기</b><br>오늘 같이 닦을 친구를 골라요</div></div>
+      <div class="ob-step-item"><div class="ob-step-ico">▶️</div><div class="ob-step-tx"><b>2. 시작 누르기</b><br>친구가 인사하면 시작!</div></div>
+      <div class="ob-step-item"><div class="ob-step-ico">🪥</div><div class="ob-step-tx"><b>3. 따라 닦기</b><br>친구 안내를 따라 구석구석</div></div>
+      <div class="ob-step-item"><div class="ob-step-ico">⭐</div><div class="ob-step-tx"><b>4. 별 받기</b><br>완료하면 별과 스티커가 쏙!</div></div>
+    </div>
+    <button class="ob-btn" onclick="onboardStep(3)">다음 →</button>
+  </div>
+
+  <!-- Step 3: 부모님 안내 -->
+  <div id="obStep3" style="display:none;">
+    <div class="ob-emoji">🔒</div>
+    <h1 class="ob-title">부모님께</h1>
+    <div class="ob-steps">
+      <div class="ob-step-item"><div class="ob-step-ico">📊</div><div class="ob-step-tx"><b>부모님 대시보드</b><br>양치 기록·설정은 여기서 관리해요</div></div>
+      <div class="ob-step-item"><div class="ob-step-ico">🔐</div><div class="ob-step-tx"><b>비밀번호 보호</b><br>아이가 함부로 못 바꾸게 PIN으로 잠겨요</div></div>
+      <div class="ob-step-item"><div class="ob-step-ico">⭐</div><div class="ob-step-tx"><b>별을 모아요</b><br>양치할수록 새 친구를 만날 수 있어요</div></div>
+    </div>
+    <button class="ob-btn" onclick="onboardFinish()">🚀 시작하기!</button>
+  </div>
 </div>
 
 <!-- 선택 화면 -->
@@ -1728,15 +1761,26 @@ function buildSelectScreen(){
 }
 
 function onboardNext(){
+  // Step1: 별명 저장 후 Step2(사용법)로
   const val=document.getElementById('obNameInput').value.trim();
   if(!val)return;
-  // 첫 번째 프로필 생성
   const profiles=loadProfiles();
   const colors=['#7c4dff','#FF6EB4','#1A9ADB','#4CD964','#FFD600','#FF8C42'];
   profiles.push({name:val,color:colors[profiles.length%colors.length],stickerCount:0,totalCount:0,attendance:{}});
   saveProfiles(profiles);
   setActiveProfileIdx(profiles.length-1);
   localStorage.setItem('chika_name',val);
+  onboardStep(2);
+}
+function onboardStep(n){
+  // 온보딩 단계 전환
+  for(let i=1;i<=3;i++){
+    const el=document.getElementById('obStep'+i);
+    if(el) el.style.display = (i===n)?'block':'none';
+  }
+}
+function onboardFinish(){
+  // 온보딩 완료 → 선택 화면
   document.getElementById('onboardScreen').style.display='none';
   document.getElementById('selectScreen').style.display='block';
   updateSelectGreeting();
