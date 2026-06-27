@@ -673,6 +673,23 @@ const STICKERS=[
   {emoji:'🌈',name:'무지개'},{emoji:'🚀',name:'로켓'},{emoji:'🎨',name:'팔레트'},
   {emoji:'🎁',name:'선물상자'},{emoji:'💝',name:'하트선물'},{emoji:'🎉',name:'축하'},
 ];
+function getStickerGoal(){
+  const v = parseInt(localStorage.getItem('chika_sticker_goal'));
+  return (v && v>=5 && v<=30) ? v : 30; // 기본 30, 5~30 범위
+}
+function changeStickerGoal(delta){
+  const cur = getStickerGoal();
+  const next = Math.max(5, Math.min(30, cur + delta));
+  setStickerGoal(next);
+  const el = document.getElementById('stickerGoalVal');
+  if(el) el.textContent = next;
+  // 현재 모은 개수가 새 목표보다 많으면 조정
+  if(loadCount() > next){ saveCount(next); }
+}
+function setStickerGoal(n){
+  n = Math.max(5, Math.min(30, n));
+  localStorage.setItem('chika_sticker_goal', n);
+}
 function loadCount(){
   const p=getActiveProfile();
   return p?(p.stickerCount||0):parseInt(localStorage.getItem('chika_count')||'0');
@@ -944,6 +961,7 @@ function getTTSKey(text){
   return TTS_KEY_MAP[clean] || null;
 }
 
+let _ttsResumeTimer=null;
 let _lastSpeakText='', _lastSpeakTime=0;
 // 음성 재생 후 콜백 실행 (인사말 → 카운트 시작용)
 function speakThen(raw, onDone){
@@ -994,6 +1012,17 @@ function speak(raw){
       // 혹시 아직 말하는 중이면 한번 더 취소
       if(speechSynthesis.speaking) speechSynthesis.cancel();
       speechSynthesis.speak(u);
+      // 안드로이드 Chrome 끊김 버그 방지: 말하는 동안 주기적으로 resume()
+      if(_ttsResumeTimer) clearInterval(_ttsResumeTimer);
+      _ttsResumeTimer = setInterval(()=>{
+        if(speechSynthesis.speaking){
+          try{ speechSynthesis.pause(); speechSynthesis.resume(); }catch(e){}
+        } else {
+          clearInterval(_ttsResumeTimer); _ttsResumeTimer=null;
+        }
+      }, 5000);
+      // 말 끝나면 타이머 정리
+      u.onend = ()=>{ if(_ttsResumeTimer){ clearInterval(_ttsResumeTimer); _ttsResumeTimer=null; } };
     }catch(e){}
   },150);
 }
@@ -2112,7 +2141,8 @@ function openAlbum(){ renderAlbum(); document.getElementById('albumOverlay').cla
 function closeAlbum(){ document.getElementById('albumOverlay').classList.remove('open'); }
 function renderAlbum(newIdx){
   const count=loadCount(),grid=document.getElementById('albumGrid');grid.innerHTML='';
-  STICKERS.forEach((s,i)=>{
+  const goal=getStickerGoal();
+  STICKERS.slice(0,goal).forEach((s,i)=>{
     const earned=i<count;
     const slot=document.createElement('div');
     slot.className='sticker-slot'+(earned?' earned':' locked')+(i===newIdx?' new-earn':'');
@@ -2121,9 +2151,9 @@ function renderAlbum(newIdx){
   });
   const ch=selectedChar||CHARS[0];
   document.getElementById('progFill').style.background=`linear-gradient(90deg,${ch.color1},#4CD964)`;
-  document.getElementById('progFill').style.width=Math.min(loadCount()/STICKERS.length*100,100)+'%';
+  document.getElementById('progFill').style.width=Math.min(loadCount()/getStickerGoal()*100,100)+'%';
   const c2=loadCount();
-  document.getElementById('albumMsg').textContent=c2===0?'첫 스티커를 모아봐요!':c2>=STICKERS.length?'🎁 30개 다 모았어요! 선물 받을 시간이에요!':c2+'개 모았어요! '+(STICKERS.length-c2)+'개 더 모으면 선물이 기다려요!';
+  document.getElementById('albumMsg').textContent=c2===0?'첫 스티커를 모아봐요!':c2>=getStickerGoal()?'🎁 다 모았어요! 선물 받을 시간이에요!':c2+'개 모았어요! '+(getStickerGoal()-c2)+'개 더 모으면 선물이 기다려요!';
 }
 function awardSticker(){
   const prev=loadCount();
@@ -2132,11 +2162,11 @@ function awardSticker(){
 
   const delay = document.getElementById('levelUpOverlay').classList.contains('show') ? 3000 : 2200;
 
-  if(prev+1 >= STICKERS.length){
+  if(prev+1 >= getStickerGoal()){
     // 30개 다 채움! → 축하 후 앨범 초기화
-    saveCount(STICKERS.length); // 잠깐 꽉 찬 상태로 표시
+    saveCount(getStickerGoal()); // 잠깐 꽉 찬 상태로 표시
     setTimeout(()=>{
-      openAlbum();renderAlbum(STICKERS.length-1);
+      openAlbum();renderAlbum(getStickerGoal()-1);
       speak('우와! 스티커 30개를 다 모았어요! 선물을 받을 시간이에요!');
       // 3초 후 앨범 초기화
       setTimeout(()=>{
@@ -2316,6 +2346,19 @@ function renderDashboard(){
 
     <!-- 탭2: 설정 -->
     <div class="dash-pane" id="dashPane1">
+      <div class="dash-section">🎁 스티커 목표 개수</div>
+      <div style="background:#f7f4ff;border-radius:14px;padding:14px 16px;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+          <span style="font-size:0.85rem;color:#5a4a8a;">선물까지 모을 스티커 수</span>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <button onclick="changeStickerGoal(-5)" style="width:34px;height:34px;border:none;border-radius:10px;background:#ede7ff;color:#7c4dff;font-size:1.2rem;cursor:pointer;">−</button>
+            <span id="stickerGoalVal" style="font-size:1.1rem;color:#3d2b8e;min-width:40px;text-align:center;font-weight:bold;">30</span>
+            <button onclick="changeStickerGoal(5)" style="width:34px;height:34px;border:none;border-radius:10px;background:#ede7ff;color:#7c4dff;font-size:1.2rem;cursor:pointer;">+</button>
+          </div>
+        </div>
+        <div style="font-size:0.74rem;color:#a89cc8;margin-top:8px;">💡 적게 설정하면 더 빨리 선물을 받아요 (5~30개)</div>
+      </div>
+
       <div class="dash-section">🦷 단계 설정 <span style="font-size:0.7rem;color:#b0a0d8;font-weight:normal;">☰ 드래그로 순서 변경</span></div>
       <div id="stepSettingArea"></div>
       <button onclick="saveDashSettings()" class="dash-btn" style="background:#7c4dff;color:white;margin-bottom:14px;">💾 단계 설정 저장</button>
@@ -2342,6 +2385,7 @@ function renderDashboard(){
   `;
   // 단계 설정 렌더 (드래그 가능)
   renderStepSettings(settings);
+  const sgv=document.getElementById('stickerGoalVal'); if(sgv) sgv.textContent=getStickerGoal();
   // 음악 선택 렌더
   renderTrackSelector();
   // 성장 현황 렌더
@@ -2440,93 +2484,60 @@ function renderStepSettings(settings){
     const row=document.createElement('div');
     row.className='step-setting-row';
     row.dataset.idx=i;
+    row.dataset.label=s.label;
+    row.dataset.icon=s.icon;
+    row.dataset.animstep=s.animStep;
+    const isFirst = i===0;
+    const isLast = i===settings.length-1;
     row.innerHTML=`
-      <div class="drag-handle" style="width:40px;height:42px;display:flex;align-items:center;justify-content:center;background:#ede7ff;border-radius:10px;font-size:1.3rem;color:#7c4dff;touch-action:none;cursor:grab;user-select:none;">☰</div>
+      <div style="display:flex;flex-direction:column;gap:2px;">
+        <button class="step-move-btn" onclick="moveStep(${i},-1)" ${isFirst?'disabled':''}
+          style="width:34px;height:20px;border:none;border-radius:7px 7px 3px 3px;background:${isFirst?'#f0f0f0':'#ede7ff'};color:${isFirst?'#ccc':'#7c4dff'};font-size:0.8rem;cursor:${isFirst?'default':'pointer'};display:flex;align-items:center;justify-content:center;padding:0;">▲</button>
+        <button class="step-move-btn" onclick="moveStep(${i},1)" ${isLast?'disabled':''}
+          style="width:34px;height:20px;border:none;border-radius:3px 3px 7px 7px;background:${isLast?'#f0f0f0':'#ede7ff'};color:${isLast?'#ccc':'#7c4dff'};font-size:0.8rem;cursor:${isLast?'default':'pointer'};display:flex;align-items:center;justify-content:center;padding:0;">▼</button>
+      </div>
       <input type="checkbox" class="sc-chk" ${s.enabled?'checked':''} style="width:18px;height:18px;accent-color:#7c4dff;cursor:pointer;">
       <span style="font-size:1.1rem;">${s.icon}</span>
       <span style="flex:1;font-size:0.85rem;color:#3d2b8e;">${s.label}</span>
       <input type="number" class="sc-sec" value="${s.sec}" min="5" max="60" step="5"
         style="width:48px;padding:4px;border:1.5px solid #d0c8f0;border-radius:8px;font-family:'Jua',sans-serif;font-size:0.82rem;text-align:center;">
       <span style="font-size:0.7rem;color:#aaa;">초</span>`;
-
-    const handle=row.querySelector('.drag-handle');
-    // 길게 눌러야 드래그 시작 (0.4초)
-    let holdTimer=null, dragging=false, startY=0, clone=null, ready=false;
-
-    handle.addEventListener('touchstart',e=>{
-      ready=false;
-      holdTimer=setTimeout(()=>{
-        ready=true;
-        // 진동 피드백
-        if(navigator.vibrate) navigator.vibrate(40);
-        startDrag(e.touches[0].clientY);
-      },400);
-    },{passive:true});
-
-    handle.addEventListener('touchmove',e=>{
-      if(!ready){ clearTimeout(holdTimer); return; }
-      e.preventDefault();
-      moveDrag(e.touches[0].clientY, e.touches[0].clientX);
-    },{passive:false});
-
-    handle.addEventListener('touchend',e=>{
-      clearTimeout(holdTimer);
-      if(dragging) endDrag(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
-      ready=false;
-    });
-
-    function startDrag(y){
-      dragging=true; startY=y; _dragSrc=row;
-      clone=row.cloneNode(true);
-      const r=row.getBoundingClientRect();
-      clone.style.cssText=`position:fixed;width:${row.offsetWidth}px;left:${r.left}px;top:${r.top}px;opacity:0.9;z-index:9999;pointer-events:none;border-radius:12px;box-shadow:0 8px 24px rgba(124,77,255,0.4);transform:scale(1.03);`;
-      document.body.appendChild(clone);
-      row.style.opacity='0.3';
-    }
-    function moveDrag(y,x){
-      if(!clone)return;
-      const r=row.getBoundingClientRect();
-      clone.style.top=(r.top+(y-startY))+'px';
-      document.querySelectorAll('.step-setting-row').forEach(rr=>rr.classList.remove('drag-over'));
-      const el=document.elementFromPoint(x,y);
-      const target=el&&el.closest('.step-setting-row');
-      if(target&&target!==row) target.classList.add('drag-over');
-    }
-    function endDrag(x,y){
-      if(clone){clone.remove();clone=null;}
-      row.style.opacity='';
-      dragging=false;
-      const el=document.elementFromPoint(x,y);
-      const target=el&&el.closest('.step-setting-row');
-      document.querySelectorAll('.step-setting-row').forEach(rr=>rr.classList.remove('drag-over'));
-      if(target&&target!==row){
-        const rows=[...area.querySelectorAll('.step-setting-row')];
-        const fromIdx=rows.indexOf(row),toIdx=rows.indexOf(target);
-        if(fromIdx<toIdx)area.insertBefore(row,target.nextSibling);
-        else area.insertBefore(row,target);
-      }
-    }
-
-    // 데스크톱 마우스 드래그 (핸들에서만)
-    handle.addEventListener('mousedown',e=>{
-      e.preventDefault();
-      _dragSrc=row;
-      row.draggable=true;
-    });
-    row.addEventListener('dragstart',e=>{if(_dragSrc===row){row.classList.add('dragging');e.dataTransfer.effectAllowed='move';}});
-    row.addEventListener('dragend',()=>{row.classList.remove('dragging');row.draggable=false;document.querySelectorAll('.step-setting-row').forEach(r=>r.classList.remove('drag-over'));});
-    row.addEventListener('dragover',e=>{e.preventDefault();if(row!==_dragSrc){document.querySelectorAll('.step-setting-row').forEach(r=>r.classList.remove('drag-over'));row.classList.add('drag-over');}});
-    row.addEventListener('drop',e=>{
-      e.preventDefault();row.classList.remove('drag-over');
-      if(!_dragSrc||_dragSrc===row)return;
-      const rows=[...area.querySelectorAll('.step-setting-row')];
-      const fromIdx=rows.indexOf(_dragSrc),toIdx=rows.indexOf(row);
-      if(fromIdx<toIdx)area.insertBefore(_dragSrc,row.nextSibling);
-      else area.insertBefore(_dragSrc,row);
-    });
-
     area.appendChild(row);
   });
+}
+
+function moveStep(idx, dir){
+  // 현재 설정 읽어서 순서 바꾸고 다시 렌더
+  const settings = collectStepSettings();
+  const newIdx = idx + dir;
+  if(newIdx < 0 || newIdx >= settings.length) return;
+  // swap
+  [settings[idx], settings[newIdx]] = [settings[newIdx], settings[idx]];
+  renderStepSettings(settings);
+  // 부드러운 하이라이트 피드백
+  const rows = document.querySelectorAll('.step-setting-row');
+  if(rows[newIdx]){
+    rows[newIdx].style.transition='background 0.3s';
+    rows[newIdx].style.background='#f0e9ff';
+    setTimeout(()=>{ rows[newIdx].style.background=''; }, 350);
+  }
+  if(navigator.vibrate) navigator.vibrate(20);
+}
+
+function collectStepSettings(){
+  // 현재 화면에 보이는 순서대로 단계 설정 수집 (화살표로 바뀐 순서 반영)
+  const rows = document.querySelectorAll('.step-setting-row');
+  const result = [];
+  rows.forEach(row=>{
+    result.push({
+      label: row.dataset.label,
+      icon: row.dataset.icon,
+      animStep: parseInt(row.dataset.animstep),
+      enabled: row.querySelector('.sc-chk')?.checked ?? true,
+      sec: parseInt(row.querySelector('.sc-sec')?.value) || 20,
+    });
+  });
+  return result;
 }
 // 현재 화면 입력값을 settings 배열로 수집 (화면 순서 그대로)
 function collectStepSettings(){
