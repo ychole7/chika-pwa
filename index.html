@@ -918,11 +918,16 @@ function initVoices(){
 }
 if(speechSynthesis.onvoiceschanged!==undefined)speechSynthesis.onvoiceschanged=initVoices;
 // iOS Safari: 긴 발화 중 끊김 방지 (pause/resume 핑퐁)
-setInterval(()=>{
-  if(window.speechSynthesis && speechSynthesis.speaking && !speechSynthesis.paused){
-    try{ speechSynthesis.pause(); speechSynthesis.resume(); }catch(e){}
-  }
-},5000);
+// iOS에서만 keep-alive (안드로이드는 pause가 음성을 끊으므로 제외)
+(function(){
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+  if(!isIOS) return; // 갤럭시 등 안드로이드는 keep-alive 안 함
+  setInterval(()=>{
+    if(window.speechSynthesis && speechSynthesis.speaking && !speechSynthesis.paused){
+      try{ speechSynthesis.pause(); speechSynthesis.resume(); }catch(e){}
+    }
+  },5000);
+})();
 setTimeout(initVoices,300);
 
 let _toastTimer=null;
@@ -969,11 +974,14 @@ function speakThen(raw, onDone){
   let done=false;
   const finish=()=>{ if(done)return; done=true; if(onDone)onDone(); };
   if(!window.speechSynthesis || !text){
-    // TTS 없으면 글자수 기반 추정 시간 후 진행
     setTimeout(finish, Math.max(1500, text.length*120));
     return;
   }
   _lastSpeakText=text; _lastSpeakTime=Date.now();
+
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+  if(_ttsResumeTimer){ clearInterval(_ttsResumeTimer); _ttsResumeTimer=null; }
+
   try{ speechSynthesis.cancel(); }catch(e){}
   const u=new SpeechSynthesisUtterance(text);
   u.lang='ko-KR';u.volume=1.0;
@@ -982,16 +990,37 @@ function speakThen(raw, onDone){
   if(_koVoice)u.voice=_koVoice;
   u.onend=finish;
   u.onerror=finish;
-  // 안전장치: 글자수 기반 예상시간 + 여유 (음성 콜백 안 와도 진행)
+  // 안전장치: 음성 콜백 안 와도 예상시간 후 진행
   const estMs = Math.max(2000, text.length*180 + 800);
   setTimeout(finish, estMs);
+  // 기기별 지연 (갤럭시 첫음절 잘림 방지: pause/resume 안 씀, cancel 후 speak만)
+  const delay = isIOS ? 120 : 60;
   setTimeout(()=>{
-    try{
-      if(speechSynthesis.speaking) speechSynthesis.cancel();
-      speechSynthesis.speak(u);
-    }catch(e){ finish(); }
-  },150);
+    try{ speechSynthesis.speak(u); }catch(e){ finish(); }
+  }, delay);
 }
+function speakStep(raw){
+  // 양치 단계 전용 TTS: 끊김 최소화
+  if(!window.speechSynthesis) return;
+  const text = preprocess(wn(raw));
+  if(!text) return;
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+  // 진행 중인 모든 음성/타이머 정리
+  if(_ttsResumeTimer){ clearInterval(_ttsResumeTimer); _ttsResumeTimer=null; }
+  try{ speechSynthesis.cancel(); }catch(e){}
+  _lastSpeakText=text; _lastSpeakTime=Date.now();
+  const u=new SpeechSynthesisUtterance(text);
+  u.lang='ko-KR'; u.volume=1.0;
+  const vs=getVoiceSetting();
+  u.rate=vs.rate; u.pitch=vs.pitch;
+  if(_koVoice) u.voice=_koVoice;
+  // 갤럭시 대응: cancel 후 넉넉히 지연(250ms) 두고 speak, pause 트릭 안 씀
+  const delay = isIOS ? 150 : 250;
+  setTimeout(()=>{
+    try{ speechSynthesis.speak(u); }catch(e){}
+  }, delay);
+}
+
 function speak(raw){
   if(!window.speechSynthesis)return;
   const text = preprocess(wn(raw));
@@ -999,32 +1028,32 @@ function speak(raw){
   const now=Date.now();
   if(text===_lastSpeakText && now-_lastSpeakTime<1500) return;
   _lastSpeakText=text; _lastSpeakTime=now;
-  // iOS Safari 안정화: cancel 후 충분히 지연
-  try{ speechSynthesis.cancel(); }catch(e){}
+
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+
+  // 이전 resume 타이머 정리
+  if(_ttsResumeTimer){ clearInterval(_ttsResumeTimer); _ttsResumeTimer=null; }
+
   const u=new SpeechSynthesisUtterance(text);
   u.lang='ko-KR';u.volume=1.0;
   const vs=getVoiceSetting();
   u.rate=vs.rate; u.pitch=vs.pitch;
   if(_koVoice)u.voice=_koVoice;
-  // cancel 직후 speak는 iOS에서 씹히므로 150ms 지연
-  setTimeout(()=>{
-    try{
-      // 혹시 아직 말하는 중이면 한번 더 취소
-      if(speechSynthesis.speaking) speechSynthesis.cancel();
-      speechSynthesis.speak(u);
-      // 안드로이드 Chrome 끊김 버그 방지: 말하는 동안 주기적으로 resume()
-      if(_ttsResumeTimer) clearInterval(_ttsResumeTimer);
-      _ttsResumeTimer = setInterval(()=>{
-        if(speechSynthesis.speaking){
-          try{ speechSynthesis.pause(); speechSynthesis.resume(); }catch(e){}
-        } else {
-          clearInterval(_ttsResumeTimer); _ttsResumeTimer=null;
-        }
-      }, 5000);
-      // 말 끝나면 타이머 정리
-      u.onend = ()=>{ if(_ttsResumeTimer){ clearInterval(_ttsResumeTimer); _ttsResumeTimer=null; } };
-    }catch(e){}
-  },150);
+
+  if(isIOS){
+    // iOS: cancel 후 약간 지연해야 안정적
+    try{ speechSynthesis.cancel(); }catch(e){}
+    setTimeout(()=>{
+      try{ speechSynthesis.speak(u); }catch(e){}
+    }, 120);
+  } else {
+    // 안드로이드(갤럭시 등): pause/resume 트릭 금지! 단순하게.
+    // cancel 직후 바로 speak하면 첫음절 잘림 → cancel하고 다음 틱에 speak
+    try{ speechSynthesis.cancel(); }catch(e){}
+    setTimeout(()=>{
+      try{ speechSynthesis.speak(u); }catch(e){}
+    }, 60);
+  }
 }
 function drainTTS(){
   if(!ttsQueue.length){ttsSpeaking=false;hideTTSInd();return;}
@@ -1964,7 +1993,7 @@ function updateStep(){
     document.getElementById('ringSub').textContent=STEP_META[idx].label;
     const animS=STEP_META[idx].animStep; // 단계 고유 번호 (순서 바뀌어도 멘트 일치)
     const script=getScript(animS, selectedChar.name);
-    showBubble(script);speak(script);
+    showBubble(script); speakStep(script);
     startRenderLoop('brushing',animS);
     const st=document.getElementById('st'+idx);if(st)st.classList.add('lit');
     if(idx+1<STEP_COUNT){const nextAnim=STEP_META[idx+1].animStep;prefetchScript(nextAnim,selectedChar.name);}
