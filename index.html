@@ -1521,12 +1521,12 @@ const CHARS=[
   {id:'tayo',name:'버스타슈',emoji:'🚌',color1:'#1A9ADB',color2:'#0D6FA3',bgGrad:['#ddf4ff','#bee9ff'],roadColor:'#546E7A',btnGrad:'linear-gradient(135deg,#1A9ADB,#0D6FA3)',draw:drawTayo},
   {id:'pinkfong',name:'핑핑핑',emoji:'🦊',color1:'#FF6EB4',color2:'#e0006a',bgGrad:['#ffe0f0','#ffc8e8'],roadColor:'#8D5A6A',btnGrad:'linear-gradient(135deg,#FF6EB4,#e0006a)',draw:drawPinkfong},
   {id:'hellocarbot',name:'안녕로봇',emoji:'🤖',color1:'#E53935',color2:'#B71C1C',bgGrad:['#ffe8e8','#ffd0d0'],roadColor:'#607D8B',btnGrad:'linear-gradient(135deg,#E53935,#B71C1C)',draw:drawCarbot},
-  {id:'tinping',name:'핑크프린세스',emoji:'🧚',color1:'#FF85C2',color2:'#d4006a',bgGrad:['#fff0fa','#ffd6f0'],roadColor:'#9C5B7A',btnGrad:'linear-gradient(135deg,#FF85C2,#d4006a)',draw:drawTinping},
-  {id:'pororo',name:'펭펭',emoji:'🐧',color1:'#4FC3F7',color2:'#0288D1',bgGrad:['#e0f7ff','#c5eeff'],roadColor:'#37474F',btnGrad:'linear-gradient(135deg,#4FC3F7,#0288D1)',draw:drawPororo},
-  {id:'larva',name:'굼뜬이',emoji:'🐛',color1:'#FFD600',color2:'#F57F17',bgGrad:['#fffde0','#fff8c0'],roadColor:'#5D4037',btnGrad:'linear-gradient(135deg,#FFD600,#F57F17)',draw:drawLarva},
-  {id:'chikamon',name:'치카몬',emoji:'💜',color1:'#9C7AE0',color2:'#6A4BA8',bgGrad:['#f3e5ff','#e1d0ff'],roadColor:'#6A4BA8',btnGrad:'linear-gradient(135deg,#9C7AE0,#6A4BA8)',draw:drawChikamon,hidden:true,price:50},
-  {id:'byulnari',name:'빛나리',emoji:'⭐',color1:'#FFD54F',color2:'#FFA000',bgGrad:['#fffde7','#fff3c4'],roadColor:'#9E7E2E',btnGrad:'linear-gradient(135deg,#FFD54F,#FFA000)',draw:drawByulnari,hidden:true,price:100},
-  {id:'rainbowcat',name:'무지개냥',emoji:'🌈',color1:'#FF80AB',color2:'#9C27B0',bgGrad:['#fce4ff','#f3e0ff'],roadColor:'#8E5572',btnGrad:'linear-gradient(135deg,#FF80AB,#9C27B0)',draw:drawRainbowcat,hidden:true,price:150},
+  {id:'tinping',name:'핑크프린세스',emoji:'🧚',price:40,color1:'#FF85C2',color2:'#d4006a',bgGrad:['#fff0fa','#ffd6f0'],roadColor:'#9C5B7A',btnGrad:'linear-gradient(135deg,#FF85C2,#d4006a)',draw:drawTinping},
+  {id:'pororo',name:'펭펭',emoji:'🐧',price:20,color1:'#4FC3F7',color2:'#0288D1',bgGrad:['#e0f7ff','#c5eeff'],roadColor:'#37474F',btnGrad:'linear-gradient(135deg,#4FC3F7,#0288D1)',draw:drawPororo},
+  {id:'larva',name:'굼뜬이',emoji:'🐛',price:70,color1:'#FFD600',color2:'#F57F17',bgGrad:['#fffde0','#fff8c0'],roadColor:'#5D4037',btnGrad:'linear-gradient(135deg,#FFD600,#F57F17)',draw:drawLarva},
+  {id:'chikamon',name:'치카몬',emoji:'💜',color1:'#9C7AE0',color2:'#6A4BA8',bgGrad:['#f3e5ff','#e1d0ff'],roadColor:'#6A4BA8',btnGrad:'linear-gradient(135deg,#9C7AE0,#6A4BA8)',draw:drawChikamon,hidden:true,price:110},
+  {id:'byulnari',name:'빛나리',emoji:'⭐',color1:'#FFD54F',color2:'#FFA000',bgGrad:['#fffde7','#fff3c4'],roadColor:'#9E7E2E',btnGrad:'linear-gradient(135deg,#FFD54F,#FFA000)',draw:drawByulnari,hidden:true,price:160},
+  {id:'rainbowcat',name:'무지개냥',emoji:'🌈',color1:'#FF80AB',color2:'#9C27B0',bgGrad:['#fce4ff','#f3e0ff'],roadColor:'#8E5572',btnGrad:'linear-gradient(135deg,#FF80AB,#9C27B0)',draw:drawRainbowcat,hidden:true,price:220},
 ];
 
 // ════════════════════════════════════════
@@ -1728,8 +1728,8 @@ function buildSelectScreen(){
   const totalCount=getTotalCount();
 
   CHARS.forEach(ch=>{
-    // 히든 캐릭터는 구매해야 잠금 해제
-    const locked = ch.hidden && !isOwned(ch.id);
+    // 가격이 있는 캐릭터는 구매해야 잠금 해제
+    const locked = ch.price && !isOwned(ch.id);
     const card=document.createElement('div');
     card.className='char-card';
 
@@ -1750,7 +1750,7 @@ function buildSelectScreen(){
     }
 
     card.innerHTML=`<canvas width="90" height="78"></canvas><div class="cname">${ch.name}</div><span class="check">✅</span>`;
-    if(ch.hidden){
+    if(ch.price && isOwned(ch.id)){
       const badge=document.createElement('div');
       badge.style.cssText='position:absolute;top:4px;left:6px;font-size:0.7rem;';
       badge.textContent='✨';
