@@ -675,11 +675,11 @@ const STICKERS=[
 ];
 function getStickerGoal(){
   const v = parseInt(localStorage.getItem('chika_sticker_goal'));
-  return (v && v>=5 && v<=30) ? v : 30; // 기본 30, 5~30 범위
+  return (v && v>=5 && v<=100) ? v : 30; // 기본 30, 5~100 범위
 }
 function changeStickerGoal(delta){
   const cur = getStickerGoal();
-  const next = Math.max(5, Math.min(30, cur + delta));
+  const next = Math.max(5, Math.min(100, cur + delta));
   setStickerGoal(next);
   const el = document.getElementById('stickerGoalVal');
   if(el) el.textContent = next;
@@ -687,7 +687,7 @@ function changeStickerGoal(delta){
   if(loadCount() > next){ saveCount(next); }
 }
 function setStickerGoal(n){
-  n = Math.max(5, Math.min(30, n));
+  n = Math.max(5, Math.min(100, n));
   localStorage.setItem('chika_sticker_goal', n);
 }
 function loadCount(){
@@ -2142,7 +2142,10 @@ function closeAlbum(){ document.getElementById('albumOverlay').classList.remove(
 function renderAlbum(newIdx){
   const count=loadCount(),grid=document.getElementById('albumGrid');grid.innerHTML='';
   const goal=getStickerGoal();
-  STICKERS.slice(0,goal).forEach((s,i)=>{
+  // 목표가 스티커 수(30)보다 크면 반복해서 채움
+  const stickerList=[];
+  for(let k=0;k<goal;k++){ stickerList.push(STICKERS[k % STICKERS.length]); }
+  stickerList.forEach((s,i)=>{
     const earned=i<count;
     const slot=document.createElement('div');
     slot.className='sticker-slot'+(earned?' earned':' locked')+(i===newIdx?' new-earn':'');
@@ -2351,12 +2354,12 @@ function renderDashboard(){
         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
           <span style="font-size:0.85rem;color:#5a4a8a;">선물까지 모을 스티커 수</span>
           <div style="display:flex;align-items:center;gap:10px;">
-            <button onclick="changeStickerGoal(-5)" style="width:34px;height:34px;border:none;border-radius:10px;background:#ede7ff;color:#7c4dff;font-size:1.2rem;cursor:pointer;">−</button>
+            <button onclick="changeStickerGoal(-10)" style="width:34px;height:34px;border:none;border-radius:10px;background:#ede7ff;color:#7c4dff;font-size:1.2rem;cursor:pointer;">−</button>
             <span id="stickerGoalVal" style="font-size:1.1rem;color:#3d2b8e;min-width:40px;text-align:center;font-weight:bold;">30</span>
-            <button onclick="changeStickerGoal(5)" style="width:34px;height:34px;border:none;border-radius:10px;background:#ede7ff;color:#7c4dff;font-size:1.2rem;cursor:pointer;">+</button>
+            <button onclick="changeStickerGoal(10)" style="width:34px;height:34px;border:none;border-radius:10px;background:#ede7ff;color:#7c4dff;font-size:1.2rem;cursor:pointer;">+</button>
           </div>
         </div>
-        <div style="font-size:0.74rem;color:#a89cc8;margin-top:8px;">💡 적게 설정하면 더 빨리 선물을 받아요 (5~30개)</div>
+        <div style="font-size:0.74rem;color:#a89cc8;margin-top:8px;">💡 적게 설정하면 더 빨리 선물을 받아요 (5~100개)</div>
       </div>
 
       <div class="dash-section">🦷 단계 설정 <span style="font-size:0.7rem;color:#b0a0d8;font-weight:normal;">☰ 드래그로 순서 변경</span></div>
