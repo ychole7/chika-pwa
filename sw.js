@@ -1,6 +1,6 @@
 // 치카치카 친구들 - Service Worker
 // 버전 올리면 캐시 갱신됨
-const CACHE_NAME = 'chika-v47';
+const CACHE_NAME = 'chika-v48';
 const ASSETS = [
   './',
   './index.html',
@@ -12,27 +12,6 @@ const ASSETS = [
   './audio/music_mountain.mp3',
   './audio/music_hitslab.mp3',
   './audio/music_sigma.mp3',
-  './audio/start_1.mp3',
-  './audio/start_2.mp3',
-  './audio/step0_1.mp3',
-  './audio/step0_2.mp3',
-  './audio/step1_1.mp3',
-  './audio/step1_2.mp3',
-  './audio/step2_1.mp3',
-  './audio/step2_2.mp3',
-  './audio/step3_1.mp3',
-  './audio/step3_2.mp3',
-  './audio/step4_1.mp3',
-  './audio/step4_2.mp3',
-  './audio/step5_1.mp3',
-  './audio/step5_2.mp3',
-  './audio/step6_1.mp3',
-  './audio/step6_2.mp3',
-  './audio/step7_1.mp3',
-  './audio/step7_2.mp3',
-  './audio/done_1.mp3',
-  './audio/done_2.mp3',
-  './audio/pause_1.mp3',
 ];
 
 // 설치: 핵심 파일 캐시

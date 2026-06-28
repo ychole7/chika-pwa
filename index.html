@@ -530,66 +530,14 @@ body{font-family:'Jua',sans-serif;background:linear-gradient(160deg,#c8edff 0%,#
 </div>
 
 <script>
-// ════════════════════════════════════════
-// 🎙 ElevenLabs TTS 음성 데이터 (Annie)
-// ════════════════════════════════════════
-const TTS_AUDIO = {
-  'start_1': 'audio/start_1.mp3',
-  'start_2': 'audio/start_2.mp3',
-  'step0_1': 'audio/step0_1.mp3',
-  'step0_2': 'audio/step0_2.mp3',
-  'step1_1': 'audio/step1_1.mp3',
-  'step1_2': 'audio/step1_2.mp3',
-  'step2_1': 'audio/step2_1.mp3',
-  'step2_2': 'audio/step2_2.mp3',
-  'step3_1': 'audio/step3_1.mp3',
-  'step3_2': 'audio/step3_2.mp3',
-  'step4_1': 'audio/step4_1.mp3',
-  'step4_2': 'audio/step4_2.mp3',
-  'step5_1': 'audio/step5_1.mp3',
-  'step5_2': 'audio/step5_2.mp3',
-  'step6_1': 'audio/step6_1.mp3',
-  'step6_2': 'audio/step6_2.mp3',
-  'step7_1': 'audio/step7_1.mp3',
-  'step7_2': 'audio/step7_2.mp3',
-  'done_1': 'audio/done_1.mp3',
-  'done_2': 'audio/done_2.mp3',
-  'pause_1': 'audio/pause_1.mp3',
-};
 
 let _ttsAudioObj = null;
-
-function playTTS(key, onEnd) {
-  if(_ttsAudioObj){ _ttsAudioObj.pause(); _ttsAudioObj = null; }
-  const data = TTS_AUDIO[key];
-  if(!data){ if(onEnd)onEnd(); return; }
-  _ttsAudioObj = new Audio(data);
-  _ttsAudioObj.volume = 1.0;
-  _ttsAudioObj.onended = ()=>{ _ttsAudioObj=null; if(onEnd)onEnd(); };
-  _ttsAudioObj.onerror = ()=>{ _ttsAudioObj=null; if(onEnd)onEnd(); };
-  _ttsAudioObj.play().catch(()=>{ if(onEnd)onEnd(); });
-}
 
 function stopTTS(){
   if(_ttsAudioObj){ _ttsAudioObj.pause(); _ttsAudioObj=null; }
 }
 
 // 이름 + TTS 재생 (이름은 Web Speech, 나머지는 mp3)
-function speakWithName(ttsKey) {
-  const name = getChildName();
-  // 이름 호명 (Web Speech)
-  if(name && name !== '친구') {
-    const u = new SpeechSynthesisUtterance(name + '아,');
-    u.lang='ko-KR'; u.rate=1.0; u.pitch=1.2; u.volume=1.0;
-    if(_koVoice) u.voice=_koVoice;
-    u.onend = ()=> playTTS(ttsKey);
-    u.onerror = ()=> playTTS(ttsKey);
-    speechSynthesis.cancel();
-    setTimeout(()=>speechSynthesis.speak(u), 60);
-  } else {
-    playTTS(ttsKey);
-  }
-}
 
 // ════════════════════════════════════════
 // 데이터 / 설정
@@ -1588,7 +1536,6 @@ function drawRainbowcat(c,t,mode,step,mini){
   c.fillStyle='#FF8FAB';c.beginPath();c.moveTo(-2,mini?-7:-9);c.lineTo(2,mini?-7:-9);c.lineTo(0,mini?-4:-6);c.closePath();c.fill();
   c.restore();
 }
-
 
 // ════════════════════════════════════════
 // 캐릭터 데이터 (draw 함수 선언 후에 정의)
