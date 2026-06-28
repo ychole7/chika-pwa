@@ -2089,8 +2089,7 @@ function finishTimer(){
   _inSession=false; _pendingStart=null;
   clearInterval(foamIv);animRoad(false);startRenderLoop('done');
   releaseWakeLock();
-  addCoins(5); // 양치 완료 보상 별
-  setTimeout(()=>toast('⭐ 별 5개를 받았어요!'), 1500);
+  addCoins(5); // 양치 완료 보상 별 (토스트는 스티커 후에 표시)
   document.getElementById('btnPause').style.display='none';
   document.getElementById('btnStart').style.display='none';
   document.getElementById('btnReset').style.display='block';
@@ -2098,7 +2097,7 @@ function finishTimer(){
   const doneMsg=rand(SCRIPTS.done);
   const banner=document.getElementById('doneBanner');banner.textContent='🎉 '+wn(doneMsg);banner.style.display='block';
   document.getElementById('ringSub').textContent='완료! 🎉';
-  showBubble('야호! 완료! 🎉');speak(doneMsg);
+  showBubble('야호! 완료! 🎉'); speakStep(doneMsg);
   for(let i=0;i<STEP_COUNT;i++)setTimeout(()=>{const st=document.getElementById('st'+i);if(st)st.classList.add('lit');},i*90);
   for(let i=0;i<STEP_COUNT;i++){const p=document.getElementById('sp'+i);if(p){p.classList.remove('active');p.classList.add('done');}}
   for(let i=0;i<32;i++)setTimeout(confetti,i*55);
@@ -2189,23 +2188,24 @@ function renderAlbum(newIdx){
 }
 function awardSticker(){
   const prev=loadCount();
-  // 누적 카운트는 항상 +1 (대시보드용)
   saveTotalStickers(loadTotalStickers()+1);
 
-  const delay = document.getElementById('levelUpOverlay').classList.contains('show') ? 3000 : 2200;
+  // 완료 음성("잘했어")이 끝날 시간 확보 후 스티커 등장 (겹침 방지)
+  const levelUp = document.getElementById('levelUpOverlay').classList.contains('show');
+  const delay = levelUp ? 3500 : 2800;
 
   if(prev+1 >= getStickerGoal()){
-    // 30개 다 채움! → 축하 후 앨범 초기화
-    saveCount(getStickerGoal()); // 잠깐 꽉 찬 상태로 표시
+    // 목표 다 채움 → 축하 후 앨범 초기화
+    saveCount(getStickerGoal());
     setTimeout(()=>{
       openAlbum();renderAlbum(getStickerGoal()-1);
-      speak('우와! 스티커 30개를 다 모았어요! 선물을 받을 시간이에요!');
-      // 3초 후 앨범 초기화
+      speakStep('우와! 스티커를 다 모았어요! 선물을 받을 시간이에요!');
+      setTimeout(()=>toast('⭐ 별 5개를 받았어요!'), 2600);
       setTimeout(()=>{
         saveCount(0);
         renderAlbum();
         toast('🎁 새 스티커판을 시작해요!');
-      }, 3500);
+      }, 4000);
     }, delay);
   } else {
     // 일반 스티커 획득
@@ -2213,7 +2213,9 @@ function awardSticker(){
     saveCount(next);
     setTimeout(()=>{
       openAlbum();renderAlbum(next-1);
-      speak('새 스티커! '+STICKERS[next-1].name+' 스티커를 받았어!');
+      speakStep('새 스티커! '+STICKERS[(next-1)%STICKERS.length].name+' 스티커를 받았어!');
+      // 스티커 음성 끝날 즈음 별 토스트 (마지막 마무리)
+      setTimeout(()=>toast('⭐ 별 5개를 받았어요!'), 2600);
     }, delay);
   }
 }
