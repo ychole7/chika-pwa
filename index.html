@@ -504,6 +504,16 @@ body{font-family:'Jua',sans-serif;background:linear-gradient(160deg,#c8edff 0%,#
     <h2>🎖 스티커 앨범</h2>
     <p class="msub">치카치카 완료하면 스티커를 받아요!</p>
     <div class="prog-wrap"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+    <div id="albumRecord" style="display:flex;justify-content:center;gap:10px;margin:10px 0 14px;">
+      <div style="background:linear-gradient(135deg,#fff3d6,#ffe9b8);border-radius:14px;padding:8px 16px;text-align:center;min-width:80px;">
+        <div style="font-size:1.3rem;font-weight:bold;color:#FF8C00;" id="recBoards">0</div>
+        <div style="font-size:0.68rem;color:#b8860b;">완성한 판</div>
+      </div>
+      <div style="background:linear-gradient(135deg,#e8f5ff,#d4ecff);border-radius:14px;padding:8px 16px;text-align:center;min-width:80px;">
+        <div style="font-size:1.3rem;font-weight:bold;color:#1A9ADB;" id="recTotal">0</div>
+        <div style="font-size:0.68rem;color:#5a8db0;">모은 스티커</div>
+      </div>
+    </div>
     <div class="album-grid" id="albumGrid"></div>
     <p style="font-size:0.74rem;color:#bbb;text-align:center;" id="albumMsg"></p>
   </div>
@@ -725,6 +735,14 @@ function isOwned(id){ return loadOwned().includes(id); }
 function addOwned(id){ const o=loadOwned(); if(!o.includes(id)){o.push(id);saveOwned(o);} }
 
 // 누적 스티커 (대시보드용 - 초기화 안 됨, 계속 +1)
+function loadCompletedBoards(){
+  return parseInt(localStorage.getItem('chika_completed_boards')) || 0;
+}
+function addCompletedBoard(){
+  const n = loadCompletedBoards() + 1;
+  localStorage.setItem('chika_completed_boards', n);
+  return n;
+}
 function loadTotalStickers(){
   const p=getActiveProfile();
   return p?(p.totalStickers||0):0;
@@ -2183,6 +2201,9 @@ function renderAlbum(newIdx){
   const ch=selectedChar||CHARS[0];
   document.getElementById('progFill').style.background=`linear-gradient(90deg,${ch.color1},#4CD964)`;
   document.getElementById('progFill').style.width=Math.min(loadCount()/getStickerGoal()*100,100)+'%';
+  // 기록 배지 업데이트
+  const recB=document.getElementById('recBoards'); if(recB) recB.textContent=loadCompletedBoards();
+  const recT=document.getElementById('recTotal'); if(recT) recT.textContent=loadTotalStickers();
   const c2=loadCount();
   document.getElementById('albumMsg').textContent=c2===0?'첫 스티커를 모아봐요!':c2>=getStickerGoal()?'🎁 다 모았어요! 선물 받을 시간이에요!':c2+'개 모았어요! '+(getStickerGoal()-c2)+'개 더 모으면 선물이 기다려요!';
 }
@@ -2199,12 +2220,13 @@ function awardSticker(){
     saveCount(getStickerGoal());
     setTimeout(()=>{
       openAlbum();renderAlbum(getStickerGoal()-1);
-      speakStep('우와! 스티커를 다 모았어요! 선물을 받을 시간이에요!');
+      const boardNum = addCompletedBoard();
+      speakStep('우와! 스티커를 다 모았어요! 벌써 '+boardNum+'판째 완성이에요!');
       setTimeout(()=>toast('⭐ 별 5개를 받았어요!'), 2600);
       setTimeout(()=>{
         saveCount(0);
         renderAlbum();
-        toast('🎁 새 스티커판을 시작해요!');
+        toast('🎉 '+boardNum+'판 완성! 새 스티커판을 시작해요!');
       }, 4000);
     }, delay);
   } else {
