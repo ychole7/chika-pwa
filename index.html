@@ -2044,6 +2044,8 @@ function startTimer(){
   requestWakeLock();
   document.getElementById('btnStart').style.display='none';
   document.getElementById('btnPause').style.display='block';
+  document.getElementById('btnReset').style.display='none';
+  document.getElementById('btnChangeChar').style.display='none';
 
   if(currentStep>=0 && remaining!==TOTAL){
     // 일시정지 후 재개 - 바로 카운트
@@ -2136,6 +2138,7 @@ function resetTimer(){
   updateTimer();updateRing();startRenderLoop('idle');
   document.getElementById('btnStart').style.display='block';document.getElementById('btnStart').textContent='🪥 치카치카 시작!';
   document.getElementById('btnPause').style.display='none';document.getElementById('btnReset').style.display='none';
+  document.getElementById('btnChangeChar').style.display='none';
   document.getElementById('doneBanner').style.display='none';document.getElementById('ringSub').textContent='준비됐나요?';
   document.getElementById('bubble').classList.remove('show');
   for(let i=0;i<STEP_COUNT;i++){const st=document.getElementById('st'+i);if(st)st.classList.remove('lit');const p=document.getElementById('sp'+i);if(p)p.classList.remove('active','done');}
