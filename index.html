@@ -2389,8 +2389,9 @@ function renderDashboard(){
       <button onclick="resetAllData()" class="dash-btn dash-btn-danger">🗑 전체 초기화</button>
     </div>
   `;
-  // 단계 설정 렌더 (드래그 가능)
-  renderStepSettings(settings);
+  // 단계 설정 렌더 (화살표 순서 변경)
+  _stepEditState = settings.map(s=>({...s})); // 편집 상태 초기화 (깊은 복사)
+  renderStepSettings(_stepEditState);
   const sgv=document.getElementById('stickerGoalVal'); if(sgv) sgv.textContent=getStickerGoal();
   // 음악 선택 렌더
   renderTrackSelector();
@@ -2482,6 +2483,7 @@ function selectTrack(id){
 // 드래그 상태
 let _dragSrc=null;
 
+let _stepEditState = null;
 function renderStepSettings(settings){
   const area=document.getElementById('stepSettingArea');
   if(!area)return;
@@ -2497,9 +2499,9 @@ function renderStepSettings(settings){
     const isLast = i===settings.length-1;
     row.innerHTML=`
       <div style="display:flex;flex-direction:column;gap:2px;">
-        <button class="step-move-btn" onclick="moveStep(${i},-1)" ${isFirst?'disabled':''}
+        <button class="step-move-btn" onclick="moveStep(${s.animStep},-1)" ${isFirst?'disabled':''}
           style="width:34px;height:20px;border:none;border-radius:7px 7px 3px 3px;background:${isFirst?'#f0f0f0':'#ede7ff'};color:${isFirst?'#ccc':'#7c4dff'};font-size:0.8rem;cursor:${isFirst?'default':'pointer'};display:flex;align-items:center;justify-content:center;padding:0;">▲</button>
-        <button class="step-move-btn" onclick="moveStep(${i},1)" ${isLast?'disabled':''}
+        <button class="step-move-btn" onclick="moveStep(${s.animStep},1)" ${isLast?'disabled':''}
           style="width:34px;height:20px;border:none;border-radius:3px 3px 7px 7px;background:${isLast?'#f0f0f0':'#ede7ff'};color:${isLast?'#ccc':'#7c4dff'};font-size:0.8rem;cursor:${isLast?'default':'pointer'};display:flex;align-items:center;justify-content:center;padding:0;">▼</button>
       </div>
       <input type="checkbox" class="sc-chk" ${s.enabled?'checked':''} style="width:18px;height:18px;accent-color:#7c4dff;cursor:pointer;">
@@ -2512,23 +2514,40 @@ function renderStepSettings(settings){
   });
 }
 
-function moveStep(idx, dir){
-  // 현재 설정 읽어서 순서 바꾸고 다시 렌더
-  const settings = collectStepSettings();
+function moveStep(animStepId, dir){
+  if(!_stepEditState) _stepEditState = collectStepSettings();
+  // 현재 화면의 체크박스/초 값 반영 (순서 유지)
+  syncStepEditState();
+  // 고유 ID(animStep)로 현재 위치 찾기 → 위치가 바뀌어도 정확히 그 항목 추적
+  const idx = _stepEditState.findIndex(s=>s.animStep===animStepId);
+  if(idx === -1) return;
   const newIdx = idx + dir;
-  if(newIdx < 0 || newIdx >= settings.length) return;
-  // swap
-  [settings[idx], settings[newIdx]] = [settings[newIdx], settings[idx]];
-  renderStepSettings(settings);
-  // 부드러운 하이라이트 피드백
+  if(newIdx < 0 || newIdx >= _stepEditState.length) return;
+  [_stepEditState[idx], _stepEditState[newIdx]] = [_stepEditState[newIdx], _stepEditState[idx]];
+  renderStepSettings(_stepEditState);
+  // 이동한 항목 하이라이트
   const rows = document.querySelectorAll('.step-setting-row');
   if(rows[newIdx]){
     rows[newIdx].style.transition='background 0.3s';
     rows[newIdx].style.background='#f0e9ff';
-    setTimeout(()=>{ rows[newIdx].style.background=''; }, 350);
+    setTimeout(()=>{ if(rows[newIdx]) rows[newIdx].style.background=''; }, 350);
   }
   if(navigator.vibrate) navigator.vibrate(20);
 }
+
+function syncStepEditState(){
+  if(!_stepEditState) return;
+  const rows = document.querySelectorAll('.step-setting-row');
+  rows.forEach((row, i)=>{
+    if(_stepEditState[i]){
+      _stepEditState[i].enabled = row.querySelector('.sc-chk')?.checked ?? true;
+      _stepEditState[i].sec = parseInt(row.querySelector('.sc-sec')?.value) || 20;
+    }
+  });
+}
+
+// 화면의 체크박스/초 입력값을 전역 상태에 반영 (순서는 그대로)
+
 
 function collectStepSettings(){
   // 현재 화면에 보이는 순서대로 단계 설정 수집 (화살표로 바뀐 순서 반영)
@@ -2559,6 +2578,7 @@ function collectStepSettings(){
 }
 
 function saveDashSettings(){
+  // 화면에 보이는 순서 그대로 수집 (화살표로 바뀐 순서 반영됨)
   const newSettings=collectStepSettings();
   if(!newSettings.length){toast('설정을 불러올 수 없어요.');return;}
   // sec 범위 보정
