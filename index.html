@@ -2367,7 +2367,7 @@ function renderDashboard(){
         <div style="font-size:0.74rem;color:#a89cc8;margin-top:8px;">💡 적게 설정하면 더 빨리 선물을 받아요 (5~100개)</div>
       </div>
 
-      <div class="dash-section">🦷 단계 설정 <span style="font-size:0.7rem;color:#b0a0d8;font-weight:normal;">☰ 드래그로 순서 변경</span></div>
+      <div class="dash-section">🦷 단계 설정 <span style="font-size:0.7rem;color:#b0a0d8;font-weight:normal;">▲▼ 화살표로 순서 변경</span></div>
       <div id="stepSettingArea"></div>
       <button onclick="saveDashSettings()" class="dash-btn" style="background:#7c4dff;color:white;margin-bottom:14px;">💾 단계 설정 저장</button>
 
@@ -2567,17 +2567,6 @@ function collectStepSettings(){
   return result;
 }
 // 현재 화면 입력값을 settings 배열로 수집 (화면 순서 그대로)
-function collectStepSettings(){
-  const rows=[...document.querySelectorAll('#stepSettingArea .step-setting-row')];
-  const base=loadStepSettings();
-  return rows.map(row=>{
-    const idx=parseInt(row.dataset.idx);
-    const orig=base[idx]||{};
-    const enabled=row.querySelector('.sc-chk').checked;
-    const sec=parseInt(row.querySelector('.sc-sec').value)||20;
-    return {label:orig.label, icon:orig.icon, animStep:orig.animStep, enabled, sec};
-  });
-}
 
 function saveDashSettings(){
   // 화면에 보이는 순서 그대로 수집 (화살표로 바뀐 순서 반영됨)
@@ -2587,7 +2576,8 @@ function saveDashSettings(){
   newSettings.forEach(s=>{ s.sec=Math.max(5,Math.min(60,parseInt(s.sec)||20)); });
   if(!newSettings.some(s=>s.enabled)){toast('최소 1개 이상 선택해주세요!');return;}
   saveStepSettings(newSettings);
-  toast('저장됐어요! ✅\n다음 치카치카부터 적용돼요.');
+  applyStepSettings(); // 메모리의 STEP_META 즉시 갱신 (저장은 됐는데 실제 반영 안 되던 버그 수정)
+  toast('저장됐어요! ✅');
 }
 function changeName(){
   _nameModalMode='change';
