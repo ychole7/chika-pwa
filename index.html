@@ -1822,6 +1822,7 @@ function onboardFinish(){
   document.getElementById('selectScreen').style.display='block';
   updateSelectGreeting();
   buildSelectScreen();
+  updateCoinDisplay();
 }
 
 function updateSelectGreeting(){
@@ -2115,6 +2116,7 @@ function doGoBack(){
   document.getElementById('selectBtn').disabled=true;
   buildSelectScreen();
   renderProfileBar();
+  updateCoinDisplay(); // 별 개수 화면 갱신 (완료 후 돌아올 때 +5 반영 안 되던 버그 수정)
 }
 
 // 색종이
@@ -2906,6 +2908,7 @@ function initApp(){
     document.getElementById('selectScreen').style.display='block';
     updateSelectGreeting();
     buildSelectScreen();
+    updateCoinDisplay(); // 앱 재시작 시 별 개수 정확히 표시 (0으로 잘못 보이던 버그 수정)
   }
 }
 initApp();
