@@ -1,8 +1,0 @@
-[{
-      "relation": ["delegate_permission/common.handle_all_urls"],
-      "target": {
-        "namespace": "android_app",
-        "package_name": "com.chikafriends.app",
-        "sha256_cert_fingerprints": ["61:BD:46:A9:9D:05:02:1F:3D:FC:0A:07:CE:14:73:97:2A:A6:23:D5:29:EB:9A:AB:AF:D6:C3:8D:85:F1:62:F0"]
-      }
-    }]
