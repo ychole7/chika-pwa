@@ -375,6 +375,7 @@ body{font-family:'Jua',sans-serif;background:linear-gradient(160deg,#c8edff 0%,#
 <div class="level-up-overlay" id="levelUpOverlay">
   <div class="level-up-card">
     <div class="level-up-emoji" id="luEmoji">🎉</div>
+    <canvas class="level-up-canvas" id="luCanvas" width="145" height="130" style="display:none;margin:0 auto 8px;"></canvas>
     <div class="level-up-title" id="luTitle">레벨 업!</div>
     <div class="level-up-sub" id="luSub">새 액세서리를 얻었어요!</div>
     <button class="level-up-btn" onclick="closeLevelUp()">야호! 고마워! 🎊</button>
@@ -1737,7 +1738,19 @@ function buyCharacter(ch){
     updateCoinDisplay();
     buildSelectScreen();
     // 축하
-    document.getElementById('luEmoji').textContent=ch.emoji;
+    const luEmoji=document.getElementById('luEmoji');
+    const luCanvas=document.getElementById('luCanvas');
+    if(typeof ch.draw==='function'){
+      luEmoji.style.display='none';
+      luCanvas.style.display='block';
+      const lc=luCanvas.getContext('2d');
+      lc.clearRect(0,0,luCanvas.width,luCanvas.height);
+      try{ ch.draw(lc,0,'idle',0,true); }catch(e){ console.error(ch.name,e); luCanvas.style.display='none'; luEmoji.style.display='block'; luEmoji.textContent=ch.emoji; }
+    }else{
+      luCanvas.style.display='none';
+      luEmoji.style.display='block';
+      luEmoji.textContent=ch.emoji;
+    }
     document.getElementById('luTitle').textContent='🎉 새 친구 등장!';
     document.getElementById('luSub').textContent="'"+ch.name+"' 친구를 데려왔어요!";
     document.getElementById('levelUpOverlay').classList.add('show');
@@ -2659,7 +2672,10 @@ function checkLevelUp(prevTotal){
 }
 
 function showLevelUp(lv){
-  document.getElementById('luEmoji').textContent = lv.emoji;
+  document.getElementById('luCanvas').style.display='none';
+  const luEmoji0=document.getElementById('luEmoji');
+  luEmoji0.style.display='block';
+  luEmoji0.textContent = lv.emoji;
   document.getElementById('luTitle').textContent = `Lv.${lv.lv} ${lv.name}!`;
   document.getElementById('luSub').textContent = lv.desc;
   document.getElementById('levelUpOverlay').classList.add('show');
