@@ -13,7 +13,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:'Jua',sans-serif;background:linear-gradient(160deg,#c8edff 0%,#ffe8f7 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;overflow-x:hidden;overflow-y:auto;padding:10px 0;box-sizing:border-box;}
+html{overflow-x:hidden;}
+body{font-family:'Jua',sans-serif;background:linear-gradient(160deg,#c8edff 0%,#ffe8f7 100%);min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow-x:clip;overflow-y:auto;padding:10px 0;box-sizing:border-box;width:100%;max-width:100vw;}
 .cloud{position:fixed;background:rgba(255,255,255,0.7);border-radius:50px;pointer-events:none;animation:cloudMove linear infinite;}
 @keyframes cloudMove{from{transform:translateX(-220px)}to{transform:translateX(110vw)}}
 
