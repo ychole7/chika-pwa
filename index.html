@@ -356,6 +356,19 @@ body{font-family:'Jua',sans-serif;background:linear-gradient(160deg,#c8edff 0%,#
   </div>
 </div>
 
+<!-- 아바타 선택 모달 -->
+<div id="avatarOverlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:495;display:none;align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:24px;padding:22px 20px;width:320px;max-width:90vw;text-align:center;">
+    <div id="avatarModalTitle" style="font-size:1.05rem;color:#5533aa;margin-bottom:4px;">아바타를 골라주세요</div>
+    <div style="font-size:0.72rem;color:#aaa;margin-bottom:16px;">마음에 드는 얼굴을 골라봐요!</div>
+    <div id="avatarGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;"></div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="closeAvatarPicker()" style="flex:1;padding:12px;border:1.5px solid #e0d8ff;border-radius:14px;background:white;color:#7c4dff;font-family:'Jua',sans-serif;font-size:0.95rem;cursor:pointer;">취소</button>
+      <button onclick="submitAvatarPicker()" style="flex:1;padding:12px;border:none;border-radius:14px;background:linear-gradient(135deg,#7c4dff,#a07cff);color:white;font-family:'Jua',sans-serif;font-size:0.95rem;cursor:pointer;">확인</button>
+    </div>
+  </div>
+</div>
+
 <!-- 상점 모달 -->
 <div id="shopOverlay">
   <div id="shopModal">
@@ -544,6 +557,20 @@ function stopTTS(){
 // ════════════════════════════════════════
 // 데이터 / 설정
 // ════════════════════════════════════════
+// 🧑 아바타 목록 (icons/ 폴더)
+const AVATARS=[
+  {id:1,file:'icons/avatar_1.png'},
+  {id:2,file:'icons/avatar_2.png'},
+  {id:3,file:'icons/avatar_3.png'},
+  {id:4,file:'icons/avatar_4.png'},
+  {id:5,file:'icons/avatar_5.png'},
+  {id:6,file:'icons/avatar_6.png'}
+];
+function avatarFile(id){
+  const a=AVATARS.find(x=>x.id===id);
+  return a?a.file:AVATARS[0].file;
+}
+
 const DEFAULT_STEPS = [
   {label:'왼쪽 아랫니', icon:'🦷', animStep:0, enabled:true, sec:20},
   {label:'오른쪽 아랫니',icon:'🦷', animStep:1, enabled:true, sec:20},
@@ -1625,11 +1652,19 @@ function renderProfileBar(){
 
   profiles.forEach((p,i)=>{
     const btn=document.createElement('button');
-    btn.style.cssText=`padding:6px 14px;border-radius:20px;border:2.5px solid ${i===activeIdx?p.color:'#e0d8ff'};
+    btn.style.cssText=`display:flex;align-items:center;gap:6px;padding:5px 12px 5px 5px;border-radius:22px;border:2.5px solid ${i===activeIdx?p.color:'#e0d8ff'};
       background:${i===activeIdx?p.color+'22':'white'};font-family:'Jua',sans-serif;font-size:0.85rem;
       color:${i===activeIdx?p.color:'#aaa'};cursor:pointer;transition:all 0.2s;`;
-    btn.textContent=(i===activeIdx?'✅ ':'')+p.name;
+    const av=document.createElement('img');
+    av.src=avatarFile(p.avatar||1);
+    av.style.cssText=`width:28px;height:28px;border-radius:50%;object-fit:cover;background:#f5f2ff;flex-shrink:0;`;
+    av.onerror=function(){ this.style.display='none'; };
+    btn.appendChild(av);
+    const nameSpan=document.createElement('span');
+    nameSpan.textContent=(i===activeIdx?'✅ ':'')+p.name;
+    btn.appendChild(nameSpan);
     btn.onclick=()=>{
+      if(i===activeIdx){ openAvatarPicker(); return; }
       setActiveProfileIdx(i);
       localStorage.setItem('chika_name',p.name);
       renderProfileBar();
@@ -1655,6 +1690,49 @@ function renderProfileBar(){
 
 const MAX_PROFILES=3; // 최대 자녀 수
 let _nameModalMode='add'; // 'add' 또는 'change'
+let _pickedAvatar=1;
+
+// 🧑 아바타 선택 모달
+function openAvatarPicker(){
+  const p=getActiveProfile();
+  if(!p) return;
+  _pickedAvatar=p.avatar||1;
+  renderAvatarGrid();
+  document.getElementById('avatarOverlay').style.display='flex';
+}
+function renderAvatarGrid(){
+  const grid=document.getElementById('avatarGrid');
+  if(!grid) return;
+  grid.innerHTML='';
+  AVATARS.forEach(a=>{
+    const cell=document.createElement('div');
+    const on=(a.id===_pickedAvatar);
+    cell.style.cssText=`aspect-ratio:1;border-radius:16px;overflow:hidden;cursor:pointer;
+      border:3px solid ${on?'#7c4dff':'#eee'};background:${on?'#f3efff':'#fafafa'};
+      display:flex;align-items:center;justify-content:center;transition:all 0.15s;`;
+    const img=document.createElement('img');
+    img.src=a.file;
+    img.style.cssText='width:100%;height:100%;object-fit:cover;';
+    img.onerror=function(){ this.parentElement.textContent='👤'; };
+    cell.appendChild(img);
+    cell.onclick=()=>{ _pickedAvatar=a.id; renderAvatarGrid(); };
+    grid.appendChild(cell);
+  });
+}
+function closeAvatarPicker(){
+  document.getElementById('avatarOverlay').style.display='none';
+}
+function submitAvatarPicker(){
+  const profiles=loadProfiles();
+  const idx=getActiveProfileIdx();
+  if(profiles[idx]){
+    profiles[idx].avatar=_pickedAvatar;
+    saveProfiles(profiles);
+  }
+  closeAvatarPicker();
+  renderProfileBar();
+  toast('아바타를 바꿨어요! 🎉');
+}
 
 function addProfile(){
   const profiles=loadProfiles();
@@ -1693,7 +1771,7 @@ function submitNameModal(){
       return;
     }
     const colors=['#7c4dff','#FF6EB4','#1A9ADB','#4CD964','#FFD600','#FF8C42'];
-    profiles.push({name,color:colors[profiles.length%colors.length],stickerCount:0,totalCount:0,attendance:{}});
+    profiles.push({name,color:colors[profiles.length%colors.length],avatar:(profiles.length%AVATARS.length)+1,stickerCount:0,totalCount:0,attendance:{}});
     saveProfiles(profiles);
     setActiveProfileIdx(profiles.length-1);
     localStorage.setItem('chika_name',name);
