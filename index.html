@@ -2283,6 +2283,21 @@ let dashUnlocked=false;
 let _pinBuffer='', _pinCallback=null;
 let _pinMode='verify', _pinFirstEntry='';
 let _confirmCallback=null;
+// 🎁 기간 한정 캐릭터 안내 팝업 (기기당 1회)
+function showEventGift(){
+  try{
+    const today=getDateKey();
+    const ch=CHARS.find(c=>c.event&&today>=c.event.start&&today<=c.event.end);
+    if(!ch)return;
+    const key='chika_gift_'+ch.id;
+    if(localStorage.getItem(key))return;
+    localStorage.setItem(key,'1');
+    const e=ch.event.end.split('-');
+    setTimeout(()=>customConfirm('🎁 깜짝 선물이 도착했어요!',
+      "할러윈 친구 '"+ch.name+"'가 놀러왔어요!\n"+parseInt(e[1])+'월 '+parseInt(e[2])+'일까지 일주일간만 만날 수 있어요.\n친구 목록 맨 앞을 확인해 보세요!',
+      ch.emoji,()=>{},{single:true,yesLabel:'와, 고마워요!'}),600);
+  }catch(err){}
+}
 function customConfirm(msg, sub, emoji, cb, opts){
   opts = opts || {};
   document.getElementById('confirmMsg').textContent=msg;
@@ -2983,6 +2998,7 @@ function initApp(){
     updateSelectGreeting();
     buildSelectScreen();
     updateCoinDisplay(); // 앱 재시작 시 별 개수 정확히 표시 (0으로 잘못 보이던 버그 수정)
+    showEventGift();
   }
 }
 initApp();
